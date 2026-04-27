@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quizzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #0f0f13;
+  --bg2: #16161d;
+  --bg3: #1e1e28;
+  --border: rgba(255,255,255,0.07);
+  --border-hover: rgba(255,255,255,0.15);
+  --text: #e8e8f0;
+  --text-muted: #7a7a9a;
+  --text-dim: #4a4a6a;
+  --accent: #7c6af7;
+  --accent-glow: rgba(124,106,247,0.25);
+  --correct: #4ade80;
+  --correct-bg: rgba(74,222,128,0.08);
+  --correct-border: rgba(74,222,128,0.25);
+  --wrong: #f87171;
+  --wrong-bg: rgba(248,113,113,0.08);
+  --wrong-border: rgba(248,113,113,0.25);
+  --radius: 12px;
+  --radius-lg: 20px;
+  --sidebar: 64px;
+  --settings-col: 200px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+* { -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; }
+body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(124,106,247,0.12) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 110%, rgba(247,192,106,0.06) 0%, transparent 60%); pointer-events: none; z-index: 0; }
+.page { position: relative; z-index: 1; }
+.hidden { display: none !important; }
+
+#page-splash { position: fixed; inset: 0; z-index: 999; background: var(--bg); display: flex; align-items: center; justify-content: center; transition: opacity 0.6s ease; }
+#page-splash.fade-out { opacity: 0; pointer-events: none; }
+.splash-logo { animation: splashIn 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards; opacity: 0; }
+.splash-logo svg { filter: drop-shadow(0 0 32px rgba(124,106,247,0.5)); }
+@keyframes splashIn { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: scale(1); } }
+
+#page-landing { height: 100vh; display: flex; overflow: hidden; }
+
+.logo-sidebar { width: var(--sidebar); flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: center; padding: 1.1rem 0; }
+
+.banks-col { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.config-banner { background: rgba(247,192,106,0.08); border-bottom: 1px solid rgba(247,192,106,0.25); padding: 0.6rem 1.1rem; display: flex; align-items: center; gap: 0.6rem; font-size: 0.75rem; color: #f7c06a; flex-shrink: 0; }
+.config-banner-icon { font-size: 0.85rem; }
+.config-banner code { background: rgba(247,192,106,0.15); padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.7rem; }
+.banks-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 1.1rem; }
+.materials-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.materials-header { display: flex; align-items: center; padding: 0.8rem 1rem; border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 0.5rem; }
+.materials-title { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); white-space: nowrap; }
+.bank-count-badge { background: rgba(124,106,247,0.15); border: 1px solid rgba(124,106,247,0.3); color: var(--accent); font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 20px; white-space: nowrap; }
+.search-input { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; padding: 0.28rem 0.65rem; font-family: 'Sora', sans-serif; font-size: 0.78rem; color: var(--text); outline: none; transition: border-color 0.2s; min-width: 0; }
+.search-input::placeholder { color: var(--text-dim); }
+.search-input:focus { border-color: var(--accent); }
+.header-btns { display: flex; gap: 0.4rem; align-items: center; flex-shrink: 0; }
+.add-bank-btn { display: inline-flex; align-items: center; gap: 0.35rem; background: var(--accent); color: white; border: none; padding: 0.35rem 0.75rem; border-radius: 7px; font-family: 'Sora', sans-serif; font-size: 0.72rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.add-bank-btn:hover { background: #8f7ef9; transform: translateY(-1px); }
+.add-bank-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.icon-btn { background: var(--bg3); border: 1px solid var(--border-hover); color: var(--text-muted); width: 27px; height: 27px; border-radius: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; flex-shrink: 0; font-size: 0.72rem; font-weight: 700; }
+.icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+.icon-btn.spinning #refresh-icon { animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.format-btn-wrap { position: relative; }
+.format-popover { position: absolute; top: calc(100% + 8px); right: 0; background: var(--bg2); border: 1px solid var(--border-hover); border-radius: var(--radius); padding: 1rem 1.1rem; width: 310px; z-index: 500; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: none; }
+.format-popover.open { display: block; }
+.format-popover-title { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.6rem; }
+.format-cols { display: flex; border: 1px solid var(--border-hover); border-radius: 6px; overflow: hidden; }
+.format-col { flex: 1; padding: 0.35rem 0.4rem; border-right: 1px solid var(--border); }
+.format-col:last-child { border-right: none; }
+.format-col-head { color: var(--accent); font-weight: 600; margin-bottom: 0.1rem; font-size: 0.6rem; }
+.format-col-val { color: var(--text-muted); font-size: 0.6rem; }
+.format-note { font-size: 0.66rem; color: var(--text-dim); margin-top: 0.6rem; line-height: 1.5; }
+.format-note strong { color: var(--text); font-weight: 500; }
+#file-input { display: none; }
+.materials-empty { padding: 2rem; text-align: center; color: var(--text-dim); font-size: 0.82rem; line-height: 1.7; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.materials-empty-icon { font-size: 1.6rem; margin-bottom: 0.5rem; opacity: 0.4; }
+.bank-list { padding: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; overflow-y: auto; flex: 1; }
+.bank-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 0.8rem; border-radius: 9px; border: 1.5px solid var(--border); background: var(--bg3); transition: all 0.2s; cursor: pointer; position: relative; flex-shrink: 0; }
+.bank-item:hover { border-color: var(--border-hover); background: #23232f; }
+.bank-item.selected { border-color: var(--accent); background: rgba(124,106,247,0.08); }
+.bank-item.selected::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); border-radius: 3px 0 0 3px; }
+.bank-checkbox { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--border-hover); background: var(--bg); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; font-size: 0.6rem; color: white; }
+.bank-item.selected .bank-checkbox { background: var(--accent); border-color: var(--accent); }
+.bank-icon { font-size: 0.95rem; flex-shrink: 0; }
+.bank-info { flex: 1; min-width: 0; }
+.bank-name { font-size: 0.83rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.bank-meta { font-size: 0.68rem; color: var(--text-muted); margin-top: 0.08rem; }
+.bank-actions { display: flex; gap: 0.3rem; align-items: center; flex-shrink: 0; }
+.bank-share { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.75rem; padding: 0.25rem; border-radius: 5px; transition: all 0.2s; flex-shrink: 0; line-height: 1; }
+.bank-share:hover { color: var(--accent); background: rgba(124,106,247,0.1); }
+.bank-delete { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.8rem; padding: 0.25rem; border-radius: 5px; transition: all 0.2s; flex-shrink: 0; line-height: 1; }
+.bank-delete:hover { color: var(--wrong); background: var(--wrong-bg); }
+
+.settings-col { width: var(--settings-col); flex-shrink: 0; background: var(--bg2); border-left: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.25rem 1rem; gap: 1rem; overflow-y: auto; }
+.settings-title { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); }
+.settings-list { display: flex; flex-direction: column; }
+.setting-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+.setting-row:last-child { border-bottom: none; }
+.setting-label { font-size: 0.82rem; color: var(--text); line-height: 1.3; }
+.toggle { position: relative; width: 38px; height: 21px; flex-shrink: 0; cursor: pointer; }
+.toggle input { display: none; }
+.toggle-track { position: absolute; inset: 0; background: var(--bg3); border: 1px solid var(--border-hover); border-radius: 11px; transition: all 0.25s; }
+.toggle input:checked + .toggle-track { background: var(--accent); border-color: var(--accent); }
+.toggle-thumb { position: absolute; top: 3px; left: 3px; width: 13px; height: 13px; background: white; border-radius: 50%; transition: transform 0.25s; pointer-events: none; }
+.toggle input:checked ~ .toggle-thumb { transform: translateX(17px); }
+.settings-spacer { flex: 1; }
+.err-msg { font-size: 0.72rem; color: var(--wrong); display: none; text-align: center; }
+.start-btn { width: 100%; padding: 0.85rem; background: var(--accent); color: white; border: none; border-radius: var(--radius); font-family: 'Sora', sans-serif; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.25s; box-shadow: 0 4px 20px var(--accent-glow); }
+.start-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 24px var(--accent-glow); }
+.start-btn:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
+
+.drag-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(10,10,16,0.93); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+.drag-overlay.active { opacity: 1; pointer-events: all; }
+.drag-overlay-rings { position: relative; display: flex; align-items: center; justify-content: center; }
+.drag-ring { position: absolute; border-radius: 50%; border: 1px solid rgba(124,106,247,0.2); animation: pulseRing 2s ease-out infinite; }
+.drag-ring:nth-child(1) { width: 160px; height: 160px; animation-delay: 0s; }
+.drag-ring:nth-child(2) { width: 250px; height: 250px; animation-delay: 0.4s; }
+.drag-ring:nth-child(3) { width: 340px; height: 340px; animation-delay: 0.8s; }
+@keyframes pulseRing { 0% { opacity: 0.6; transform: scale(0.95); } 50% { opacity: 0.2; } 100% { opacity: 0.6; transform: scale(1.02); } }
+.drag-center { z-index: 1; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
+.drag-icon-wrap { width: 72px; height: 72px; border-radius: 50%; background: rgba(124,106,247,0.12); border: 1.5px solid rgba(124,106,247,0.35); display: flex; align-items: center; justify-content: center; font-size: 2rem; }
+.drag-title { font-size: 1.2rem; font-weight: 600; color: var(--text); }
+.drag-sub { font-size: 0.85rem; color: var(--text-muted); }
+
+#shared-start-modal .modal-box { max-width: 440px; }
+#shared-start-modal .modal-box { box-shadow: 0 0 35px 8px rgba(124,106,247,0.15), 0 24px 64px rgba(0,0,0,0.5); }
+.shared-bank-card { background: var(--bg3); border: 1px solid var(--border-hover); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1.5rem; text-align: left; }
+.shared-bank-card-name { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.5rem; }
+.shared-bank-card-meta { font-size: 0.78rem; color: var(--text-muted); }
+.shared-settings-row { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+.shared-settings-row:last-child { border-bottom: none; }
+.shared-settings-label { font-size: 0.85rem; color: var(--text); }
+.shared-modal-actions { display: flex; flex-direction: column; gap: 0.6rem; }
+.shared-modal-icon { font-size: 2.25rem; margin-bottom: 1rem; }
+
+#page-exam { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.exam-header { padding: 1rem 2rem; display: flex; align-items: center; gap: 1.5rem; border-bottom: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; }
+.home-btn { background: var(--bg3); border: 1px solid var(--border-hover); color: var(--text-muted); border-radius: 8px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+.home-btn:hover { border-color: var(--wrong); color: var(--wrong); background: var(--wrong-bg); }
+.progress-wrap { flex: 1; display: flex; flex-direction: column; gap: 0.35rem; }
+.progress-info { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-muted); }
+.progress-bar-bg { height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #a78bfa); border-radius: 2px; transition: width 0.4s ease; }
+.score-chips { display: flex; gap: 0.5rem; flex-shrink: 0; }
+.score-chip { padding: 0.25rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 500; }
+.score-chip.c { background: var(--correct-bg); border: 1px solid var(--correct-border); color: var(--correct); }
+.score-chip.w { background: var(--wrong-bg); border: 1px solid var(--wrong-border); color: var(--wrong); }
+.exam-body { flex: 1; overflow-y: auto; display: flex; align-items: flex-start; justify-content: center; padding: 3rem 1.5rem; }
+.question-card { width: 100%; max-width: 720px; animation: fadeUp 0.35s ease; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+.question-meta { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.q-type-badge { background: rgba(124,106,247,0.1); border: 1px solid rgba(124,106,247,0.25); border-radius: 6px; padding: 0.2rem 0.6rem; font-size: 0.7rem; color: var(--accent); font-weight: 600; letter-spacing: 0.08em; }
+.q-bank-badge { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 6px; padding: 0.2rem 0.6rem; font-size: 0.7rem; color: var(--text-muted); font-weight: 500; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mastery-badge { background: rgba(247,192,106,0.1); border: 1px solid rgba(247,192,106,0.3); border-radius: 6px; padding: 0.2rem 0.6rem; font-size: 0.7rem; color: #f7c06a; font-weight: 600; letter-spacing: 0.08em; }
+.question-text { font-family: 'Source Serif 4', serif; font-size: clamp(1.05rem,2.5vw,1.25rem); line-height: 1.7; color: var(--text); margin-bottom: 2rem; font-weight: 400; white-space: pre-wrap; }
+.choices { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; }
+.choice-btn { display: flex; align-items: flex-start; gap: 1rem; background: var(--bg2); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; cursor: pointer; transition: all 0.2s; text-align: left; font-family: 'Sora', sans-serif; color: var(--text); width: 100%; font-size: 0.92rem; line-height: 1.5; }
+.choice-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--bg3); transform: translateX(4px); }
+.choice-letter { width: 28px; height: 28px; border-radius: 6px; background: var(--bg3); border: 1px solid var(--border-hover); display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; flex-shrink: 0; transition: all 0.2s; }
+.choice-text { padding-top: 3px; flex: 1; }
+.choice-btn.correct { border-color: var(--correct); background: var(--correct-bg); }
+.choice-btn.correct .choice-letter { background: var(--correct); border-color: var(--correct); color: #0f1f0f; }
+.choice-btn.wrong { border-color: var(--wrong); background: var(--wrong-bg); }
+.choice-btn.wrong .choice-letter { background: var(--wrong); border-color: var(--wrong); color: #1f0f0f; }
+.choice-btn:disabled { cursor: not-allowed; }
+.answer-feedback { margin-top: 0.75rem; padding: 0.55rem 1rem; border-radius: 8px; font-size: 0.82rem; font-weight: 600; animation: fadeUp 0.25s ease; }
+.answer-feedback.correct { background: var(--correct-bg); border: 1px solid var(--correct-border); color: var(--correct); }
+.answer-feedback.wrong { background: var(--wrong-bg); border: 1px solid var(--wrong-border); color: var(--wrong); }
+.answer-reveal { margin-top: 0.6rem; border-radius: var(--radius); overflow: hidden; animation: fadeUp 0.3s ease; }
+.reveal-correct { background: var(--correct-bg); border: 1px solid var(--correct-border); }
+.reveal-wrong { background: var(--wrong-bg); border: 1px solid var(--wrong-border); }
+.reveal-body { padding: 0.9rem 1.1rem; font-family: 'Source Serif 4', serif; font-size: 0.86rem; line-height: 1.8; color: var(--text); }
+.reveal-body .exp-text { white-space: pre-wrap; display: block; margin-top: 0.35rem; }
+.auto-bar-wrap { width: 100%; height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-top: 0.75rem; }
+.auto-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #a78bfa); border-radius: 2px; transition: width linear; width: 100%; }
+.next-btn { width: 100%; margin-top: 1.25rem; padding: 0.9rem; background: var(--accent); color: white; border: 1.5px solid var(--accent); border-radius: var(--radius); font-family: 'Sora', sans-serif; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.25s; display: none; box-shadow: 0 4px 16px var(--accent-glow); }
+.next-btn:hover { background: #8f7ef9; border-color: #8f7ef9; transform: translateY(-1px); box-shadow: 0 6px 24px var(--accent-glow); }
+.next-btn.show { display: block; }
+
+#page-summary { height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; overflow: hidden; }
+.summary-card { width: 100%; max-width: 680px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; animation: fadeUp 0.4s ease; display: flex; flex-direction: column; max-height: calc(100vh - 4rem); }
+.summary-hero { padding: 2rem 2rem 1.5rem; text-align: center; border-bottom: 1px solid var(--border); position: relative; overflow: visible; flex-shrink: 0; }
+.summary-hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 80% at 50% 120%, var(--accent-glow), transparent); pointer-events: none; }
+.summary-score-ring { width: min(120px, 28vw); height: min(120px, 28vw); margin: 0 auto 1rem; position: relative; flex-shrink: 0; }
+.summary-score-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; overflow: visible; }
+.score-ring-bg { fill: none; stroke: var(--bg3); stroke-width: 8; }
+.score-ring-fill { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round; stroke-dasharray: 283; stroke-dashoffset: 283; transition: stroke-dashoffset 1s ease, stroke 0.5s ease; }
+.score-ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.score-ring-number { font-size: clamp(1.1rem, 4vw, 1.5rem); font-weight: 700; line-height: 1; white-space: nowrap; }
+.score-ring-label { font-size: clamp(0.55rem, 1.5vw, 0.65rem); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.summary-title { font-size: clamp(1rem, 3vw, 1.3rem); font-weight: 700; margin-bottom: 0.3rem; }
+.summary-subtitle { font-size: clamp(0.75rem, 2vw, 0.85rem); color: var(--text-muted); }
+.summary-stats { display: grid; grid-template-columns: repeat(3,1fr); flex-shrink: 0; }
+.stat-cell { padding: 1rem; text-align: center; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.stat-cell:nth-child(3n) { border-right: none; }
+.stat-value { font-size: clamp(1.1rem, 3vw, 1.4rem); font-weight: 700; line-height: 1; margin-bottom: 0.25rem; }
+.stat-value.green { color: var(--correct); }
+.stat-value.red { color: var(--wrong); }
+.stat-value.amber { color: #f7c06a; }
+.stat-label { font-size: clamp(0.62rem, 1.5vw, 0.72rem); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.summary-review { padding: 1.25rem 1.75rem; border-top: 1px solid var(--border); flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.review-title { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.85rem; flex-shrink: 0; }
+.review-list { display: flex; flex-direction: column; gap: 0.6rem; overflow-y: auto; flex: 1; }
+.review-item { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.85rem 1rem; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); flex-shrink: 0; }
+.review-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.review-dot.c { background: var(--correct); }
+.review-dot.w { background: var(--wrong); }
+.review-q { font-size: 0.85rem; color: var(--text); line-height: 1.5; margin-bottom: 0.3rem; }
+.review-ans-block { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.25rem; }
+.review-ans-row { font-size: 0.78rem; color: var(--text-muted); }
+.review-ans-row .ca { color: var(--correct); }
+.review-ans-row .wa { color: var(--wrong); }
+.summary-actions { padding: 1.25rem 1.75rem; display: flex; gap: 0.75rem; border-top: 1px solid var(--border); flex-shrink: 0; }
+.action-btn { flex: 1; padding: 0.8rem; border-radius: var(--radius); font-family: 'Sora', sans-serif; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; }
+.action-btn.primary { background: var(--accent); color: white; box-shadow: 0 4px 16px var(--accent-glow); }
+.action-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px var(--accent-glow); }
+.action-btn.secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border-hover); }
+.action-btn.secondary:hover { border-color: var(--accent); color: var(--accent); }
+.action-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; }
+
+.modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.65); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 1.5rem; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal-box { background: var(--bg2); border: 1px solid var(--border-hover); border-radius: var(--radius-lg); padding: 2rem 1.75rem; max-width: 380px; width: 100%; text-align: center; transform: translateY(12px); transition: transform 0.25s ease; box-shadow: 0 24px 64px rgba(0,0,0,0.5); }
+.modal-overlay.open .modal-box { transform: translateY(0); }
+.modal-icon { font-size: 2.25rem; margin-bottom: 1rem; }
+.modal-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem; }
+.modal-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 1.5rem; }
+.modal-actions { display: flex; gap: 0.75rem; }
+.modal-btn { flex: 1; padding: 0.75rem; border-radius: var(--radius); font-family: 'Sora', sans-serif; font-size: 0.88rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+.modal-btn.danger { background: var(--wrong); color: #1a0a0a; }
+.modal-btn.danger:hover { background: #f99; transform: translateY(-1px); }
+.modal-btn.ghost { background: var(--bg3); color: var(--text); border: 1px solid var(--border-hover); }
+.modal-btn.ghost:hover { border-color: var(--accent); color: var(--accent); }
+.modal-btn.primary { background: var(--accent); color: white; box-shadow: 0 4px 16px var(--accent-glow); }
+.modal-btn.primary:hover { background: #8f7ef9; transform: translateY(-1px); }
+
+.passcode-input { width: 100%; background: var(--bg3); border: 1.5px solid var(--border-hover); border-radius: var(--radius); padding: 0.75rem 1rem; font-family: 'Sora', sans-serif; font-size: 1.1rem; font-weight: 600; color: var(--text); text-align: center; letter-spacing: 0.25em; outline: none; transition: border-color 0.2s; margin-bottom: 1rem; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text; }
+.passcode-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.passcode-input.shake { animation: shake 0.4s ease; border-color: var(--wrong); box-shadow: 0 0 0 3px rgba(248,113,113,0.2); }
+@keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
+.passcode-err { font-size: 0.78rem; color: var(--wrong); margin-top: -0.6rem; margin-bottom: 0.8rem; min-height: 1rem; }
+
+.toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(8px); background: var(--bg3); border: 1px solid var(--border-hover); color: var(--text); padding: 0.65rem 1.25rem; border-radius: 30px; font-size: 0.82rem; font-weight: 500; opacity: 0; transition: all 0.3s ease; pointer-events: none; z-index: 300; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+@media (max-width: 768px) {
+  body { height: auto; overflow: hidden; }
+  #page-landing { flex-direction: column; height: 100vh; overflow: hidden; }
+  .logo-sidebar { width: 100%; height: 52px; border-right: none; border-bottom: 1px solid var(--border); flex-direction: row; align-items: center; justify-content: flex-start; padding: 0 1rem; flex-shrink: 0; }
+  .banks-col { flex: 1; overflow: hidden; min-height: 0; }
+  .banks-body { padding: 0.75rem; }
+  .materials-header { flex-wrap: nowrap; gap: 0.4rem; padding: 0.7rem 0.85rem; }
+  .materials-title { font-size: 0.68rem; }
+  .search-input { min-width: 0; flex: 1; font-size: 0.72rem; }
+  .settings-col { width: 100%; border-left: none; border-top: 1px solid var(--border); padding: 0.85rem 1rem; flex-direction: column; gap: 0.6rem; flex-shrink: 0; overflow: visible; }
+  .settings-list { flex-direction: row; flex-wrap: wrap; gap: 0.4rem; }
+  .setting-row { border-bottom: none; padding: 0.4rem 0.65rem; background: var(--bg3); border-radius: 8px; gap: 0.5rem; flex: 1; min-width: 80px; }
+  .setting-label { font-size: 0.75rem; }
+  .settings-spacer { display: none; }
+  .start-btn { padding: 0.75rem; font-size: 0.85rem; }
+  .err-msg { text-align: left; }
+  #page-exam { height: 100vh; }
+  .exam-header { padding: 0.75rem 1rem; gap: 0.85rem; }
+  .exam-body { padding: 1.25rem 1rem; }
+  .question-text { font-size: 1rem; }
+  .choice-btn { padding: 0.85rem 1rem; font-size: 0.88rem; }
+  #page-summary { height: 100vh; padding: 0; overflow: hidden; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; }
+  .summary-card { max-width: 100%; border-radius: 0; border: none; height: 100vh; max-height: 100vh; }
+  .summary-hero { padding: 1rem 1rem 0.75rem; overflow: visible; }
+  .summary-score-ring { width: min(80px, 22vw); height: min(80px, 22vw); margin-bottom: 0.6rem; }
+  .summary-title { font-size: clamp(0.95rem, 4vw, 1.1rem); }
+  .summary-subtitle { font-size: clamp(0.72rem, 2.5vw, 0.8rem); }
+  .stat-cell { padding: 0.65rem 0.4rem; }
+  .summary-review { padding: 0.85rem 1rem; }
+  .summary-actions { padding: 0.75rem 1rem; background: var(--bg2); border-top: 1px solid var(--border); }
+  .format-popover { top: auto; bottom: calc(100% + 8px); right: auto; left: 0; width: 280px; }
+}
+
+@media (max-width: 400px) {
+  .setting-row { min-width: 70px; }
+  .materials-title { display: none; }
+  .bank-count-badge { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div id="page-splash">
+  <div class="splash-logo">
+    <svg width="100" height="100" viewBox="0 0 56 56" fill="none">
+      <rect width="56" height="56" rx="16" fill="#1e1e28"/>
+      <rect x="14" y="16" width="28" height="4" rx="2" fill="#7c6af7"/>
+      <rect x="14" y="26" width="20" height="4" rx="2" fill="#7c6af7" opacity="0.6"/>
+      <rect x="14" y="36" width="24" height="4" rx="2" fill="#7c6af7" opacity="0.35"/>
+      <circle cx="42" cy="38" r="7" fill="#4ade80"/>
+      <polyline points="38.5,38 41,40.5 45.5,35.5" stroke="#0f1f0f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+  </div>
+</div>
+
+<div class="drag-overlay" id="drag-overlay">
+  <div class="drag-overlay-rings">
+    <div class="drag-ring"></div>
+    <div class="drag-ring"></div>
+    <div class="drag-ring"></div>
+    <div class="drag-center">
+      <div class="drag-icon-wrap">📂</div>
+      <div class="drag-title">Drop to upload</div>
+      <div class="drag-sub">.xlsx, .xls, or .csv</div>
+    </div>
+  </div>
+</div>
+
+<div id="page-landing" class="page hidden">
+  <div class="logo-sidebar">
+    <svg width="40" height="40" viewBox="0 0 56 56" fill="none">
+      <rect width="56" height="56" rx="14" fill="#1e1e28"/>
+      <rect x="14" y="16" width="28" height="4" rx="2" fill="#7c6af7"/>
+      <rect x="14" y="26" width="20" height="4" rx="2" fill="#7c6af7" opacity="0.6"/>
+      <rect x="14" y="36" width="24" height="4" rx="2" fill="#7c6af7" opacity="0.35"/>
+      <circle cx="42" cy="38" r="7" fill="#4ade80"/>
+      <polyline points="38.5,38 41,40.5 45.5,35.5" stroke="#0f1f0f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+  </div>
+
+  <div class="banks-col">
+    <div class="config-banner" id="config-banner">
+      <span class="config-banner-icon">⚠️</span>
+      <span>GAS backend not configured. Set <code>GAS_URL</code> in the script.</span>
+    </div>
+    <div class="banks-body">
+      <div class="materials-panel">
+        <div class="materials-header">
+          <span class="materials-title">Question Banks</span>
+          <span class="bank-count-badge" id="bank-count-badge">0</span>
+          <input class="search-input" id="search-input" type="text" placeholder="Search banks…">
+          <div class="header-btns">
+            <button class="icon-btn" id="refresh-btn" title="Refresh">
+              <svg id="refresh-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"/>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              </svg>
+            </button>
+            <div class="format-btn-wrap">
+              <button class="icon-btn" id="format-btn" title="Column format">?</button>
+              <div class="format-popover" id="format-popover">
+                <div class="format-popover-title">Required column format</div>
+                <div class="format-cols">
+                  <div class="format-col"><div class="format-col-head">A</div><div class="format-col-val">question</div></div>
+                  <div class="format-col"><div class="format-col-head">B</div><div class="format-col-val">a</div></div>
+                  <div class="format-col"><div class="format-col-head">C</div><div class="format-col-val">b</div></div>
+                  <div class="format-col"><div class="format-col-head">D</div><div class="format-col-val">c</div></div>
+                  <div class="format-col"><div class="format-col-head">E</div><div class="format-col-val">d</div></div>
+                  <div class="format-col"><div class="format-col-head">F</div><div class="format-col-val">e</div></div>
+                  <div class="format-col"><div class="format-col-head">G</div><div class="format-col-val">answer</div></div>
+                  <div class="format-col"><div class="format-col-head">H</div><div class="format-col-val">explanation</div></div>
+                </div>
+                <div class="format-note">First row = headers. <strong>Answer</strong>: A, B, C, D, or E.</div>
+              </div>
+            </div>
+            <button class="add-bank-btn" id="add-bank-btn">
+              <span class="desktop-label">+ Upload Bank</span>
+              <span class="mobile-label" style="display:none;">+</span>
+            </button>
+          </div>
+          <input type="file" id="file-input" accept=".xlsx,.xls,.csv" multiple>
+        </div>
+        <div id="materials-empty" class="materials-empty">
+          <div class="materials-empty-icon">📚</div>
+          No question banks yet.<br>Upload or drop a file to get started.
+        </div>
+        <div id="bank-list" class="bank-list hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-col">
+    <div class="settings-title">Session Settings</div>
+    <div class="settings-list">
+      <div class="setting-row">
+        <div class="setting-label">Mastery mode</div>
+        <label class="toggle"><input type="checkbox" id="toggle-mastery" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">Shuffle questions</div>
+        <label class="toggle"><input type="checkbox" id="toggle-shuffle" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">Auto-advance</div>
+        <label class="toggle"><input type="checkbox" id="toggle-auto" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+      </div>
+    </div>
+    <div class="settings-spacer"></div>
+    <div class="err-msg" id="err-msg"></div>
+    <button class="start-btn" id="start-btn" disabled>Start Session →</button>
+  </div>
+</div>
+
+<div id="page-exam" class="page hidden">
+  <header class="exam-header">
+    <button class="home-btn" id="quit-btn" title="Quit quiz">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    </button>
+    <div class="progress-wrap">
+      <div class="progress-info">
+        <span><span id="prog-cur">0</span> / <span id="prog-total">0</span></span>
+        <span id="prog-pct">0%</span>
+      </div>
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-fill" style="width:0%"></div></div>
+    </div>
+    <div class="score-chips" id="score-chips">
+      <span class="score-chip c" id="hdr-c">0 ✓</span>
+      <span class="score-chip w" id="hdr-w">0 ✗</span>
+    </div>
+  </header>
+  <div class="exam-body">
+    <div class="question-card" id="question-card"></div>
+  </div>
+</div>
+
+<div id="page-summary" class="page hidden">
+  <div class="summary-card">
+    <div class="summary-hero">
+      <div class="summary-score-ring">
+        <svg viewBox="0 0 100 100">
+          <circle class="score-ring-bg" cx="50" cy="50" r="45"/>
+          <circle class="score-ring-fill" id="score-ring" cx="50" cy="50" r="45"/>
+        </svg>
+        <div class="score-ring-text">
+          <div class="score-ring-number" id="sum-pct">0%</div>
+          <div class="score-ring-label" id="score-ring-label-text">Score</div>
+        </div>
+      </div>
+      <div class="summary-title" id="sum-title">Session Complete</div>
+      <div class="summary-subtitle" id="sum-sub"></div>
+    </div>
+    <div class="summary-stats">
+      <div class="stat-cell"><div class="stat-value green" id="sum-correct">0</div><div class="stat-label" id="label-correct">Correct</div></div>
+      <div class="stat-cell"><div class="stat-value red" id="sum-wrong">0</div><div class="stat-label" id="label-wrong">Incorrect</div></div>
+      <div class="stat-cell"><div class="stat-value amber" id="sum-total">0</div><div class="stat-label" id="label-total">Total</div></div>
+    </div>
+    <div class="summary-review">
+      <div class="review-title">Answer Review</div>
+      <div class="review-list" id="review-list"></div>
+    </div>
+    <div class="summary-actions" id="summary-actions">
+      <button class="action-btn secondary" id="btn-landing">← Back to Banks</button>
+      <button class="action-btn primary" id="btn-retake">↺ Retake Session</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="quit-modal">
+  <div class="modal-box">
+    <div class="modal-icon">🚪</div>
+    <div class="modal-title">Quit this session?</div>
+    <div class="modal-desc">Your progress will be lost. You'll go back to the home screen.</div>
+    <div class="modal-actions">
+      <button class="modal-btn ghost" id="quit-keep">Keep going</button>
+      <button class="modal-btn danger" id="quit-confirm">Yes, quit</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal-box">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-title">Delete this bank?</div>
+    <div class="modal-desc">"<span id="delete-modal-name"></span>" will be permanently removed from Google Drive. This cannot be undone.</div>
+    <div class="modal-actions">
+      <button class="modal-btn ghost" id="delete-cancel">Cancel</button>
+      <button class="modal-btn danger" id="delete-modal-confirm">Yes, delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="shared-start-modal">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="shared-modal-icon">📋</div>
+    <div class="modal-title" id="shared-modal-title">Ready to start?</div>
+    <div class="shared-bank-card" id="shared-bank-info">
+      <div class="shared-bank-card-name">
+        <span>📋</span>
+        <span id="shared-bank-name">Loading…</span>
+      </div>
+      <div class="shared-bank-card-meta" id="shared-bank-meta">Loading questions…</div>
+    </div>
+    <div class="settings-list" style="margin-bottom:1.25rem;">
+      <div class="shared-settings-row">
+        <div class="shared-settings-label">Mastery mode</div>
+        <label class="toggle"><input type="checkbox" id="shared-toggle-mastery" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+      </div>
+      <div class="shared-settings-row">
+        <div class="shared-settings-label">Shuffle questions</div>
+        <label class="toggle"><input type="checkbox" id="shared-toggle-shuffle" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+      </div>
+      <div class="shared-settings-row" style="border-bottom:none;">
+        <div class="shared-settings-label">Auto-advance</div>
+        <label class="toggle"><input type="checkbox" id="shared-toggle-auto" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+      </div>
+    </div>
+    <div class="shared-modal-actions">
+      <button class="modal-btn primary" id="shared-start-btn" disabled>Start Quiz →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="passcode-modal">
+  <div class="modal-box">
+    <div class="modal-icon">🔐</div>
+    <div class="modal-title">Admin Access</div>
+    <div class="modal-desc">Enter the passcode to access the question bank manager.</div>
+    <input class="passcode-input" id="passcode-input" type="password" placeholder="••••••" maxlength="20" autocomplete="off">
+    <div class="passcode-err" id="passcode-err"></div>
+    <div class="modal-actions">
+      <button class="modal-btn primary" id="passcode-submit">Unlock →</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwuVQ1Un_9UfHx8GPnN_MP8VsV3gxUSXU3YjcLLtKq6CIQ1WH8llmm9tzWeZ7u6EpX1/exec';
+const GAS_READY = GAS_URL && GAS_URL !== 'PASTE_YOUR_GAS_WEB_APP_URL_HERE';
+const AUTO_ADVANCE_CORRECT_SECS = 1;
+const AUTO_ADVANCE_WRONG_SECS = 2;
+
+let banks = [], selectedIds = new Set();
+let sessionQuestions = [], wrongPool = [], sessionResults = [];
+let currentIdx = 0, correctCount = 0, wrongCount = 0;
+let autoTimer = null, pendingDeleteId = null;
+let totalUniqueQuestions = 0, searchQuery = '';
+let isSharedMode = false;
+let sharedBankData = null;
+
+const $ = id => document.getElementById(id);
+
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (e.ctrlKey && (k === 'c' || k === 'u' || k === 'p' || k === 's')) e.preventDefault();
+});
+window.addEventListener('beforeprint', e => e.preventDefault());
+
+function updateUploadBtn() {
+  const isMobile = window.innerWidth <= 768;
+  const desktop = document.querySelector('.desktop-label');
+  const mobile = document.querySelector('.mobile-label');
+  if (desktop && mobile) {
+    desktop.style.display = isMobile ? 'none' : '';
+    mobile.style.display = isMobile ? '' : 'none';
+  }
+  if (isMobile) {
+    $('add-bank-btn').style.padding = '0.35rem 0.6rem';
+    $('add-bank-btn').style.fontSize = '1rem';
+    $('add-bank-btn').style.fontWeight = '700';
+  } else {
+    $('add-bank-btn').style.padding = '';
+    $('add-bank-btn').style.fontSize = '';
+    $('add-bank-btn').style.fontWeight = '';
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  updateUploadBtn();
+  window.addEventListener('resize', updateUploadBtn);
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const sharedBankId = urlParams.get('bank');
+
+  setTimeout(() => {
+    $('page-splash').classList.add('fade-out');
+    setTimeout(() => {
+      $('page-splash').classList.add('hidden');
+
+      if (sharedBankId && GAS_READY) {
+        isSharedMode = true;
+        $('page-landing').classList.add('hidden');
+        loadSharedBank(sharedBankId);
+      } else {
+        showPasscodeGate();
+      }
+    }, 600);
+  }, 1800);
+
+  $('refresh-btn').addEventListener('click', () => loadBanksFromGAS());
+  $('add-bank-btn').addEventListener('click', () => $('file-input').click());
+  $('file-input').addEventListener('change', e => { handleFiles(e.target.files); e.target.value = ''; });
+  $('start-btn').addEventListener('click', () => startQuiz());
+  $('quit-btn').addEventListener('click', () => openQuitModal());
+  $('quit-keep').addEventListener('click', () => closeQuitModal());
+  $('quit-confirm').addEventListener('click', () => confirmQuit());
+  $('quit-modal').addEventListener('click', e => { if (e.target === $('quit-modal')) closeQuitModal(); });
+  $('delete-cancel').addEventListener('click', () => closeDeleteModal());
+  $('delete-modal').addEventListener('click', e => { if (e.target === $('delete-modal')) closeDeleteModal(); });
+  $('btn-landing').addEventListener('click', () => goLanding());
+  $('btn-retake').addEventListener('click', () => retakeSession());
+  $('shared-start-btn').addEventListener('click', () => startSharedSession());
+
+  $('passcode-submit').addEventListener('click', () => submitPasscode());
+  $('passcode-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitPasscode(); });
+
+  $('search-input').addEventListener('input', e => {
+    searchQuery = e.target.value.toLowerCase().trim();
+    renderBanks();
+  });
+
+  $('format-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    $('format-popover').classList.toggle('open');
+  });
+  document.addEventListener('click', () => $('format-popover').classList.remove('open'));
+
+  $('delete-modal-confirm').addEventListener('click', async () => {
+    const id = pendingDeleteId; if (!id) return;
+    closeDeleteModal();
+    try {
+      const data = await gasPost({ action: 'delete' }, { fileId: id });
+      if (data.error) { showErr('Delete failed: ' + data.error); return; }
+      banks = banks.filter(b => b.id !== id);
+      selectedIds.delete(id);
+      renderBanks();
+      showToast('Bank deleted from Drive.');
+    } catch (err) { showErr('Delete error: ' + err.message); }
+  });
+
+  setupDragOverlay();
+});
+
+function showPasscodeGate() {
+  $('passcode-modal').classList.add('open');
+  $('passcode-err').textContent = '';
+  $('passcode-input').value = '';
+  setTimeout(() => $('passcode-input').focus(), 300);
+}
+
+async function submitPasscode() {
+  const val = $('passcode-input').value.trim();
+  if (!val) return;
+  $('passcode-submit').textContent = 'Checking…';
+  $('passcode-submit').disabled = true;
+  try {
+    const data = await gasGet({ action: 'verify', code: val });
+    if (data.ok) {
+      $('passcode-modal').classList.remove('open');
+      $('page-landing').classList.remove('hidden');
+      if (GAS_READY) {
+        $('config-banner').classList.add('hidden');
+        loadBanksFromGAS();
+      }
+    } else {
+      const inp = $('passcode-input');
+      inp.classList.remove('shake');
+      void inp.offsetWidth;
+      inp.classList.add('shake');
+      $('passcode-err').textContent = 'Incorrect passcode. Try again.';
+      inp.value = '';
+      setTimeout(() => inp.classList.remove('shake'), 400);
+    }
+  } catch (e) {
+    $('passcode-err').textContent = 'Network error. Try again.';
+  } finally {
+    $('passcode-submit').textContent = 'Unlock →';
+    $('passcode-submit').disabled = false;
+  }
+}
+
+async function loadSharedBank(fileId) {
+  $('shared-bank-name').textContent = 'Loading…';
+  $('shared-bank-meta').textContent = 'Fetching questions from Drive…';
+  $('shared-start-modal').classList.add('open');
+  $('shared-start-btn').disabled = true;
+
+  try {
+    const listData = await gasGet({ action: 'list' });
+    let bankName = 'Quiz Bank';
+    if (!listData.error && listData.banks) {
+      const found = listData.banks.find(b => b.id === fileId);
+      if (found) bankName = found.name;
+    }
+
+    const data = await gasGet({ action: 'get', fileId });
+    if (data.error) throw new Error(data.error);
+    const bytes = Uint8Array.from(atob(data.data), c => c.charCodeAt(0));
+    const questions = parseWorkbook(bytes.buffer);
+
+    sharedBankData = { id: fileId, name: bankName, questions };
+    $('shared-bank-name').textContent = bankName;
+    $('shared-bank-meta').textContent = `${questions.length} questions ready`;
+    $('shared-start-btn').disabled = false;
+    $('shared-modal-title').textContent = 'Ready to start?';
+  } catch (err) {
+    $('shared-bank-name').textContent = 'Error loading bank';
+    $('shared-bank-meta').textContent = err.message;
+    $('shared-modal-title').textContent = 'Could not load bank';
+  }
+}
+
+function startSharedSession() {
+  if (!sharedBankData) return;
+  $('shared-start-modal').classList.remove('open');
+
+  $('toggle-mastery').checked = $('shared-toggle-mastery').checked;
+  $('toggle-shuffle').checked = $('shared-toggle-shuffle').checked;
+  $('toggle-auto').checked    = $('shared-toggle-auto').checked;
+
+  banks = [{ ...sharedBankData }];
+  selectedIds = new Set([sharedBankData.id]);
+
+  const source = sharedBankData.questions.map(q => ({ ...q, _bank: sharedBankData.name }));
+  _beginSession(source);
+}
+
+function setupDragOverlay() {
+  let dragCounter = 0;
+  const overlay = $('drag-overlay');
+  document.addEventListener('dragenter', e => {
+    if (!GAS_READY) return;
+    e.preventDefault(); dragCounter++;
+    overlay.classList.add('active');
+  });
+  document.addEventListener('dragleave', () => {
+    dragCounter--;
+    if (dragCounter <= 0) { dragCounter = 0; overlay.classList.remove('active'); }
+  });
+  document.addEventListener('dragover', e => e.preventDefault());
+  document.addEventListener('drop', e => {
+    e.preventDefault(); dragCounter = 0;
+    overlay.classList.remove('active');
+    if (!GAS_READY) return;
+    handleFiles(e.dataTransfer.files);
+  });
+}
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+  $(id).classList.remove('hidden');
+}
+
+let toastTimer;
+function showToast(msg, duration = 2800) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), duration);
+}
+function showErr(msg) {
+  const el = $('err-msg'); el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 4500);
+}
+
+async function gasGet(params) {
+  const url = new URL(GAS_URL);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  return (await fetch(url.toString())).json();
+}
+async function gasPost(params, body) {
+  const url = new URL(GAS_URL);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  return (await fetch(url.toString(), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(body) })).json();
+}
+
+async function loadBanksFromGAS() {
+  if (!GAS_READY) return;
+  const btn = $('refresh-btn'); btn.classList.add('spinning');
+  try {
+    const data = await gasGet({ action: 'list' });
+    if (data.error) { showErr('Could not load banks: ' + data.error); return; }
+    const existing = {};
+    banks.forEach(b => { if (b.questions) existing[b.id] = b.questions; });
+    banks = data.banks.map(b => ({ ...b, questions: existing[b.id] || null }));
+    selectedIds = new Set();
+    renderBanks();
+  } catch (e) { showErr('Network error — check your GAS URL.'); }
+  finally { btn.classList.remove('spinning'); }
+}
+
+async function fetchBankQuestions(bank) {
+  const data = await gasGet({ action: 'get', fileId: bank.id });
+  if (data.error) throw new Error(data.error);
+  const bytes = Uint8Array.from(atob(data.data), c => c.charCodeAt(0));
+  return parseWorkbook(bytes.buffer);
+}
+
+function parseWorkbook(ab) {
+  const wb = XLSX.read(ab, { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+  if (rows.length < 2) throw new Error('No data found.');
+  const firstRow = rows[0].map(h => String(h).toLowerCase().trim());
+  let qI=0, aI=1, bI=2, cI=3, dI=4, eI=5, ansI=6, expI=7;
+  qI   = firstRow.findIndex(h => h === 'question' || h.startsWith('q'));
+  aI   = firstRow.findIndex(h => h === 'a');
+  bI   = firstRow.findIndex(h => h === 'b');
+  cI   = firstRow.findIndex(h => h === 'c');
+  dI   = firstRow.findIndex(h => h === 'd');
+  eI   = firstRow.findIndex(h => h === 'e');
+  ansI = firstRow.findIndex(h => h === 'answer' || h === 'ans' || h === 'correct');
+  expI = firstRow.findIndex(h => h === 'explanation' || h === 'exp' || h === 'reason');
+  if (qI<0) qI=0; if (aI<0) aI=1; if (bI<0) bI=2;
+  if (cI<0) cI=3; if (dI<0) dI=4; if (eI<0) eI=5; if (ansI<0) ansI=6; if (expI<0) expI=7;
+  const parsed = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    const q   = String(r[qI]   || '').trim();
+    const ca  = String(r[aI]   || '').trim();
+    const cb  = String(r[bI]   || '').trim();
+    const cc  = String(r[cI]   || '').trim();
+    const cd  = String(r[dI]   || '').trim();
+    const ce  = String(r[eI]   || '').trim();
+    const ans = String(r[ansI] || '').trim().toUpperCase().charAt(0);
+    const exp = String(r[expI] || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+    if (!q || !ca || !ans) continue;
+    const choices = [{ letter: 'A', text: ca }];
+    if (cb) choices.push({ letter: 'B', text: cb });
+    if (cc) choices.push({ letter: 'C', text: cc });
+    if (cd) choices.push({ letter: 'D', text: cd });
+    if (ce) choices.push({ letter: 'E', text: ce });
+    parsed.push({ question: q, choices, answer: ans, type: choices.length === 2 ? 'True / False' : 'MCQ', explanation: exp });
+  }
+  if (!parsed.length) throw new Error('No valid questions found. Check column format.');
+  return parsed;
+}
+
+function handleFiles(fileList) {
+  if (!GAS_READY) { showErr('Set GAS_URL first.'); return; }
+  const files = Array.from(fileList).filter(f => /\.(xlsx|xls|csv)$/i.test(f.name));
+  if (!files.length) { showErr('Please upload .xlsx, .xls, or .csv files.'); return; }
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = async e => {
+      try {
+        showToast(`⏳ Uploading "${file.name}"…`, 15000);
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(e.target.result)));
+        const mimeType = file.name.endsWith('.csv') ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        const data = await gasPost({ action: 'upload' }, { fileName: file.name, data: b64, mimeType });
+        if (data.error) { showErr('Upload failed: ' + data.error); return; }
+        showToast(`✓ "${file.name}" saved to Drive`);
+        await loadBanksFromGAS();
+      } catch (err) { showErr('Upload error: ' + err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function getShareUrl(bankId) {
+  const url = new URL(window.location.href);
+  url.search = '';
+  url.searchParams.set('bank', bankId);
+  return url.toString();
+}
+
+function copyShareLink(bankId, bankName) {
+  const link = getShareUrl(bankId);
+  navigator.clipboard.writeText(link).then(() => {
+    showToast(`🔗 Link for "${bankName}" copied!`);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = link;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast(`🔗 Link for "${bankName}" copied!`);
+  });
+}
+
+function renderBanks() {
+  const list = $('bank-list'), empty = $('materials-empty');
+  $('bank-count-badge').textContent = banks.length;
+  const filtered = searchQuery ? banks.filter(b => b.name.toLowerCase().includes(searchQuery)) : banks;
+  if (!banks.length) {
+    empty.classList.remove('hidden'); list.classList.add('hidden');
+    $('start-btn').disabled = true; return;
+  }
+  empty.classList.add('hidden'); list.classList.remove('hidden'); list.innerHTML = '';
+  if (!filtered.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--text-dim);font-size:0.82rem;padding:2rem;">No banks match your search.</div>';
+    updateStartBtn(); return;
+  }
+  filtered.forEach(bank => {
+    const isSel = selectedIds.has(bank.id);
+    const item = document.createElement('div');
+    item.className = 'bank-item' + (isSel ? ' selected' : '');
+    item.innerHTML = `
+      <div class="bank-checkbox">${isSel ? '✓' : ''}</div>
+      <div class="bank-icon">📋</div>
+      <div class="bank-info">
+        <div class="bank-name">${escHtml(bank.name)}</div>
+        <div class="bank-meta">${bank.questions ? bank.questions.length + ' questions' : 'tap to load'} · Added ${bank.addedAt}</div>
+      </div>
+      <div class="bank-actions">
+        <button class="bank-share" title="Copy share link">🔗</button>
+        <button class="bank-delete" title="Delete from Drive">✕</button>
+      </div>`;
+    item.addEventListener('click', () => toggleBank(bank.id));
+    item.querySelector('.bank-share').addEventListener('click', e => {
+      e.stopPropagation();
+      copyShareLink(bank.id, bank.name);
+    });
+    item.querySelector('.bank-delete').addEventListener('click', e => {
+      e.stopPropagation(); openDeleteModal(bank.id, bank.name);
+    });
+    list.appendChild(item);
+  });
+  updateStartBtn();
+}
+
+function toggleBank(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+  renderBanks();
+}
+function openDeleteModal(id, name) { pendingDeleteId = id; $('delete-modal-name').textContent = name; $('delete-modal').classList.add('open'); }
+function closeDeleteModal() { $('delete-modal').classList.remove('open'); pendingDeleteId = null; }
+function updateStartBtn() { $('start-btn').disabled = !(selectedIds.size > 0 && banks.some(b => selectedIds.has(b.id))); }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function shuffleChoices(q) {
+  const correctText = q.choices.find(c => c.letter === q.answer)?.text;
+  const shuffled = [...q.choices].sort(() => Math.random() - 0.5).map((c, i) => ({ ...c, letter: String.fromCharCode(65 + i) }));
+  const newAnswer = shuffled.find(c => c.text === correctText)?.letter || q.answer;
+  return { ...q, choices: shuffled, answer: newAnswer };
+}
+
+async function startQuiz() {
+  const selectedBanks = banks.filter(b => selectedIds.has(b.id));
+  if (!selectedBanks.length) { showErr('Select at least one bank.'); return; }
+  $('start-btn').textContent = 'Loading…'; $('start-btn').disabled = true;
+  try {
+    for (const bank of selectedBanks) {
+      if (!bank.questions) {
+        showToast(`⏳ Loading "${bank.name}"…`, 60000);
+        bank.questions = await fetchBankQuestions(bank);
+        showToast(`✓ "${bank.name}" loaded!`, 1500);
+        renderBanks();
+      }
+    }
+  } catch (err) {
+    showErr('Could not load bank: ' + err.message);
+    $('start-btn').textContent = 'Start Session →'; $('start-btn').disabled = false; return;
+  }
+  $('start-btn').textContent = 'Start Session →'; $('start-btn').disabled = false;
+  const source = selectedBanks.flatMap(b => b.questions.map(q => ({ ...q, _bank: b.name })));
+  _beginSession(source);
+}
+
+function _beginSession(source) {
+  const doShuffle = $('toggle-shuffle').checked;
+  let questions = doShuffle ? [...source].sort(() => Math.random() - 0.5) : [...source];
+  questions = questions.map(q => shuffleChoices(q));
+  totalUniqueQuestions = questions.length;
+  sessionQuestions = questions;
+  currentIdx = 0; correctCount = 0; wrongCount = 0;
+  sessionResults = []; wrongPool = [];
+  showPage('page-exam');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const q = sessionQuestions[currentIdx];
+  const masteryOn = $('toggle-mastery').checked;
+
+  const displayTotal = masteryOn ? totalUniqueQuestions : sessionQuestions.length;
+  const displayCur   = masteryOn ? correctCount + 1 : currentIdx + 1;
+  const progressPct  = masteryOn
+    ? Math.round((correctCount / totalUniqueQuestions) * 100)
+    : Math.round((currentIdx / sessionQuestions.length) * 100);
+
+  $('prog-cur').textContent   = displayCur;
+  $('prog-total').textContent = displayTotal;
+  $('prog-pct').textContent   = progressPct + '%';
+  $('prog-fill').style.width  = progressPct + '%';
+  $('hdr-c').textContent = correctCount + ' ✓';
+  $('hdr-w').textContent = wrongCount + ' ✗';
+  $('score-chips').style.display = masteryOn ? 'none' : 'flex';
+
+  const card = $('question-card');
+  card.innerHTML = ''; card.style.animation = 'none'; void card.offsetWidth; card.style.animation = '';
+
+  const meta = document.createElement('div'); meta.className = 'question-meta';
+  meta.innerHTML = `
+    <span>Question ${displayCur} of ${displayTotal}</span>
+    <span class="q-type-badge">${q.type}</span>
+    ${masteryOn ? '<span class="mastery-badge">⚡ Mastery</span>' : ''}
+    ${q._bank ? `<span class="q-bank-badge">📋 ${escHtml(q._bank)}</span>` : ''}`;
+  card.appendChild(meta);
+
+  const qt = document.createElement('div'); qt.className = 'question-text'; qt.textContent = q.question;
+  card.appendChild(qt);
+
+  const choicesEl = document.createElement('div'); choicesEl.className = 'choices';
+  q.choices.forEach(c => {
+    const btn = document.createElement('button'); btn.className = 'choice-btn';
+    btn.innerHTML = `<div class="choice-letter">${c.letter}</div><div class="choice-text">${escHtml(c.text)}</div>`;
+    btn.addEventListener('click', () => submitAnswer(c.letter, btn, q, card));
+    choicesEl.appendChild(btn);
+  });
+  card.appendChild(choicesEl);
+}
+
+function clearAutoAdvance() { if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; } }
+
+function submitAnswer(selected, btnEl, q, card) {
+  clearAutoAdvance();
+  const isCorrect = selected === q.answer;
+  const autoOn    = $('toggle-auto').checked;
+
+  card.querySelectorAll('.choice-btn').forEach(b => {
+    b.disabled = true;
+    if (b.querySelector('.choice-letter').textContent === q.answer) b.classList.add('correct');
+  });
+  if (!isCorrect) btnEl.classList.add('wrong');
+
+  if (isCorrect) correctCount++; else { wrongCount++; wrongPool.push(q); }
+  sessionResults.push({ q, selected, isCorrect });
+  $('hdr-c').textContent = correctCount + ' ✓';
+  $('hdr-w').textContent = wrongCount + ' ✗';
+
+  const feedback = document.createElement('div');
+  feedback.className = 'answer-feedback ' + (isCorrect ? 'correct' : 'wrong');
+  feedback.textContent = isCorrect ? '✓ Correct' : '✗ Incorrect';
+  card.appendChild(feedback);
+
+  if (q.explanation && !autoOn) {
+    const reveal = document.createElement('div');
+    reveal.className = 'answer-reveal ' + (isCorrect ? 'reveal-correct' : 'reveal-wrong');
+    const expLabel = '<span style="font-size:0.7rem;font-weight:600;font-family:\'Sora\',sans-serif;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">Explanation</span>';
+    reveal.innerHTML = `<div class="reveal-body">${expLabel}<span class="exp-text"></span></div>`;
+    reveal.querySelector('.exp-text').textContent = q.explanation;
+    card.appendChild(reveal);
+  }
+
+  const masteryOn = $('toggle-mastery').checked;
+  if (masteryOn && !isCorrect) sessionQuestions.push(shuffleChoices(q));
+
+  const isLast  = currentIdx + 1 >= sessionQuestions.length;
+  const advance = () => { currentIdx++; isLast ? showSummary() : renderQuestion(); };
+
+  if (autoOn) {
+    const barWrap = document.createElement('div'); barWrap.className = 'auto-bar-wrap';
+    const barFill = document.createElement('div'); barFill.className = 'auto-bar-fill';
+    barWrap.appendChild(barFill); card.appendChild(barWrap);
+    const secs = isCorrect ? AUTO_ADVANCE_CORRECT_SECS : AUTO_ADVANCE_WRONG_SECS;
+    requestAnimationFrame(() => { barFill.style.transition = `width ${secs}s linear`; barFill.style.width = '0%'; });
+    autoTimer = setTimeout(advance, secs * 1000);
+  } else {
+    const next = document.createElement('button'); next.className = 'next-btn show';
+    next.textContent = isLast ? 'See Results →' : 'Next Question →';
+    next.addEventListener('click', () => advance());
+    card.appendChild(next);
+  }
+}
+
+function showSummary() {
+  showPage('page-summary');
+
+  const backBtn = $('btn-landing');
+  backBtn.style.display = isSharedMode ? 'none' : '';
+
+  const masteryOn      = $('toggle-mastery').checked;
+  const total          = totalUniqueQuestions;
+  const totalAttempts  = sessionResults.length;
+  const firstTryCorrect = sessionResults.filter((r, i) => {
+    if (!r.isCorrect) return false;
+    return sessionResults.slice(0, i).filter(x => x.q.question === r.q.question).length === 0;
+  }).length;
+  const firstTryPct = total > 0 ? Math.round((firstTryCorrect / total) * 100) : 0;
+  const retries     = totalAttempts - total;
+  const pct         = masteryOn ? firstTryPct : total > 0 ? Math.round((correctCount / total) * 100) : 0;
+
+  const circumference = 2 * Math.PI * 45;
+  const ring = $('score-ring');
+  ring.style.strokeDasharray  = circumference;
+  ring.style.strokeDashoffset = circumference;
+  setTimeout(() => {
+    ring.style.strokeDashoffset = circumference - (pct / 100) * circumference;
+    ring.style.stroke = pct >= 80 ? '#4ade80' : pct >= 60 ? '#7c6af7' : '#f87171';
+  }, 100);
+
+  $('sum-pct').textContent = pct + '%';
+  $('score-ring-label-text').textContent = masteryOn ? '1st Try' : 'Score';
+
+  if (masteryOn) {
+    $('sum-title').textContent     = '🏆 All Mastered!';
+    $('sum-sub').textContent       = `${total} questions mastered in ${totalAttempts} attempts`;
+    $('sum-correct').textContent   = total;       $('label-correct').textContent = 'Mastered';
+    $('sum-wrong').textContent     = retries;     $('label-wrong').textContent   = 'Retries';
+    $('sum-total').textContent     = firstTryPct + '%'; $('label-total').textContent = 'Accuracy';
+  } else {
+    $('sum-title').textContent = pct===100?'Perfect score!':pct>=80?'Great work!':pct>=60?'Good effort':'Keep practicing';
+    $('sum-sub').textContent   = `${correctCount} of ${total} correct`;
+    $('sum-correct').textContent = correctCount; $('label-correct').textContent = 'Correct';
+    $('sum-wrong').textContent   = wrongCount;   $('label-wrong').textContent   = 'Incorrect';
+    $('sum-total').textContent   = total;         $('label-total').textContent   = 'Total';
+  }
+
+  const list = $('review-list'); list.innerHTML = '';
+  const seen = new Set(), uniqueResults = [];
+  sessionResults.forEach(r => {
+    if (!seen.has(r.q.question)) {
+      seen.add(r.q.question);
+      uniqueResults.push([...sessionResults].reverse().find(x => x.q.question === r.q.question));
+    }
+  });
+  uniqueResults.forEach((r, i) => {
+    const cc = r.q.choices.find(c => c.letter === r.q.answer);
+    const sc = r.q.choices.find(c => c.letter === r.selected);
+    const ansHtml = r.isCorrect
+      ? `<div class="review-ans-block"><div class="review-ans-row"><span class="ca">✓ ${r.q.answer} — ${escHtml(cc?.text||'')}</span></div></div>`
+      : `<div class="review-ans-block"><div class="review-ans-row">Your answer: <span class="wa">${r.selected} — ${escHtml(sc?.text||'')}</span></div><div class="review-ans-row">Correct: <span class="ca">${r.q.answer} — ${escHtml(cc?.text||'')}</span></div></div>`;
+    const item = document.createElement('div'); item.className = 'review-item';
+    item.innerHTML = `<div class="review-dot ${r.isCorrect?'c':'w'}"></div><div style="flex:1;min-width:0;"><div class="review-q">${i+1}. ${escHtml(r.q.question)}</div>${ansHtml}</div>`;
+    list.appendChild(item);
+  });
+}
+
+function retakeSession() {
+  clearAutoAdvance();
+  if (isSharedMode && sharedBankData) {
+    const source = sharedBankData.questions.map(q => ({ ...q, _bank: sharedBankData.name }));
+    _beginSession(source);
+  } else {
+    const source = banks.filter(b => selectedIds.has(b.id)).flatMap(b => b.questions.map(q => ({ ...q, _bank: b.name })));
+    _beginSession(source);
+  }
+}
+
+function openQuitModal()  { $('quit-modal').classList.add('open'); }
+function closeQuitModal() { $('quit-modal').classList.remove('open'); }
+function confirmQuit() {
+  clearAutoAdvance();
+  closeQuitModal();
+  if (isSharedMode) {
+    showPage('page-landing');
+    $('page-landing').classList.add('hidden');
+    $('shared-start-modal').classList.add('open');
+  } else {
+    goLanding();
+  }
+}
+function goLanding() { showPage('page-landing'); }
+</script>
+</body>
+</html>
