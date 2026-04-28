@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quizzer</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 56'%3E%3Crect width='56' height='56' rx='14' fill='%231e1e28'/%3E%3Crect x='14' y='16' width='28' height='4' rx='2' fill='%237c6af7'/%3E%3Crect x='14' y='26' width='20' height='4' rx='2' fill='%237c6af7' opacity='.6'/%3E%3Crect x='14' y='36' width='24' height='4' rx='2' fill='%237c6af7' opacity='.35'/%3E%3Ccircle cx='42' cy='38' r='7' fill='%234ade80'/%3E%3Cpolyline points='38.5,38 41,40.5 45.5,35.5' stroke='%230f1f0f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -37,16 +38,20 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .page { position: relative; z-index: 1; }
 .hidden { display: none !important; }
 
+/* ── SPLASH ── */
 #page-splash { position: fixed; inset: 0; z-index: 999; background: var(--bg); display: flex; align-items: center; justify-content: center; transition: opacity 0.6s ease; }
 #page-splash.fade-out { opacity: 0; pointer-events: none; }
 .splash-logo { animation: splashIn 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards; opacity: 0; }
 .splash-logo svg { filter: drop-shadow(0 0 32px rgba(124,106,247,0.5)); }
 @keyframes splashIn { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: scale(1); } }
 
+/* ── LANDING — 3 column desktop ── */
 #page-landing { height: 100vh; display: flex; overflow: hidden; }
 
+/* Col 1: logo sidebar */
 .logo-sidebar { width: var(--sidebar); flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: center; padding: 1.1rem 0; }
 
+/* Col 2: banks */
 .banks-col { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
 .config-banner { background: rgba(247,192,106,0.08); border-bottom: 1px solid rgba(247,192,106,0.25); padding: 0.6rem 1.1rem; display: flex; align-items: center; gap: 0.6rem; font-size: 0.75rem; color: #f7c06a; flex-shrink: 0; }
 .config-banner-icon { font-size: 0.85rem; }
@@ -98,6 +103,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .bank-delete { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.8rem; padding: 0.25rem; border-radius: 5px; transition: all 0.2s; flex-shrink: 0; line-height: 1; }
 .bank-delete:hover { color: var(--wrong); background: var(--wrong-bg); }
 
+/* Col 3: settings */
 .settings-col { width: var(--settings-col); flex-shrink: 0; background: var(--bg2); border-left: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.25rem 1rem; gap: 1rem; overflow-y: auto; }
 .settings-title { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); }
 .settings-list { display: flex; flex-direction: column; }
@@ -116,6 +122,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .start-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 24px var(--accent-glow); }
 .start-btn:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
 
+/* ── DRAG OVERLAY ── */
 .drag-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(10,10,16,0.93); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
 .drag-overlay.active { opacity: 1; pointer-events: all; }
 .drag-overlay-rings { position: relative; display: flex; align-items: center; justify-content: center; }
@@ -129,17 +136,120 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .drag-title { font-size: 1.2rem; font-weight: 600; color: var(--text); }
 .drag-sub { font-size: 0.85rem; color: var(--text-muted); }
 
-#shared-start-modal .modal-box { max-width: 440px; }
-#shared-start-modal .modal-box { box-shadow: 0 0 35px 8px rgba(124,106,247,0.15), 0 24px 64px rgba(0,0,0,0.5); }
-.shared-bank-card { background: var(--bg3); border: 1px solid var(--border-hover); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1.5rem; text-align: left; }
-.shared-bank-card-name { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 0.3rem; display: flex; align-items: center; gap: 0.5rem; }
-.shared-bank-card-meta { font-size: 0.78rem; color: var(--text-muted); }
-.shared-settings-row { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+/* ── SHARED BANK START MODAL ── */
+/* ambient glow behind the entire shared modal overlay */
+#shared-start-modal {
+  background: rgba(0,0,0,0.72);
+}
+#shared-start-modal::before {
+  content: '';
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 520px; height: 520px;
+  background: radial-gradient(circle, rgba(124,106,247,0.18) 0%, transparent 65%);
+  pointer-events: none;
+  animation: ambientBreath 5s ease-in-out infinite alternate;
+  z-index: 0;
+}
+@keyframes ambientBreath {
+  from { opacity: 0.7; transform: translate(-50%,-50%) scale(0.95); }
+  to   { opacity: 1;   transform: translate(-50%,-50%) scale(1.08); }
+}
+#shared-start-modal .modal-box {
+  max-width: 420px;
+  background: var(--bg2);
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(124,106,247,0.2);
+  box-shadow: 0 0 0 1px rgba(124,106,247,0.08), 0 32px 80px rgba(0,0,0,0.6);
+}
+/* small icon above title — SVG-based, no emoji */
+.shared-modal-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: rgba(124,106,247,0.12);
+  border: 1px solid rgba(124,106,247,0.25);
+}
+.shared-modal-icon-wrap svg {
+  width: 24px; height: 24px;
+  stroke: var(--accent);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.shared-bank-card {
+  background: var(--bg3);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.25rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.shared-bank-card-icon {
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  background: rgba(124,106,247,0.12);
+  border: 1px solid rgba(124,106,247,0.2);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.shared-bank-card-icon svg {
+  width: 16px; height: 16px;
+  stroke: var(--accent);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.shared-bank-card-body { flex: 1; min-width: 0; }
+.shared-bank-card-name { font-size: 0.92rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shared-bank-card-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.15rem; }
+.shared-settings-row { display: flex; align-items: center; justify-content: space-between; padding: 0.55rem 0; border-bottom: 1px solid var(--border); }
 .shared-settings-row:last-child { border-bottom: none; }
 .shared-settings-label { font-size: 0.85rem; color: var(--text); }
-.shared-modal-actions { display: flex; flex-direction: column; gap: 0.6rem; }
-.shared-modal-icon { font-size: 2.25rem; margin-bottom: 1rem; }
+.shared-modal-actions { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1.25rem; }
+#shared-start-btn {
+  background: var(--accent);
+  border: none;
+  box-shadow: 0 4px 20px rgba(124,106,247,0.4);
+  transition: all 0.25s;
+  font-size: 0.95rem;
+  padding: 0.85rem;
+}
+#shared-start-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(124,106,247,0.5);
+  background: #8f7ef9;
+}
+#shared-start-btn:disabled { opacity: 0.35; box-shadow: none; cursor: not-allowed; }
+#shared-retry-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-hover);
+  font-family: 'Sora', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border-radius: var(--radius);
+  padding: 0.6rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: none;
+}
+#shared-retry-btn:hover { border-color: var(--accent); color: var(--accent); }
+.shared-loading .shared-bank-card-meta { animation: loadingPulse 1.4s ease-in-out infinite; }
+@keyframes loadingPulse { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
 
+/* ── EXAM ── */
 #page-exam { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 .exam-header { padding: 1rem 2rem; display: flex; align-items: center; gap: 1.5rem; border-bottom: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; }
 .home-btn { background: var(--bg3); border: 1px solid var(--border-hover); color: var(--text-muted); border-radius: 8px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
@@ -152,7 +262,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .score-chip { padding: 0.25rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 500; }
 .score-chip.c { background: var(--correct-bg); border: 1px solid var(--correct-border); color: var(--correct); }
 .score-chip.w { background: var(--wrong-bg); border: 1px solid var(--wrong-border); color: var(--wrong); }
-.exam-body { flex: 1; overflow-y: auto; display: flex; align-items: flex-start; justify-content: center; padding: 3rem 1.5rem; }
+.exam-body { flex: 1; overflow-y: auto; display: flex; align-items: flex-start; justify-content: center; padding: 3rem 1.5rem 5rem; }
 .question-card { width: 100%; max-width: 720px; animation: fadeUp 0.35s ease; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 .question-meta { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
@@ -177,6 +287,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .reveal-correct { background: var(--correct-bg); border: 1px solid var(--correct-border); }
 .reveal-wrong { background: var(--wrong-bg); border: 1px solid var(--wrong-border); }
 .reveal-body { padding: 0.9rem 1.1rem; font-family: 'Source Serif 4', serif; font-size: 0.86rem; line-height: 1.8; color: var(--text); }
+/* FIX: explanation line breaks */
 .reveal-body .exp-text { white-space: pre-wrap; display: block; margin-top: 0.35rem; }
 .auto-bar-wrap { width: 100%; height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-top: 0.75rem; }
 .auto-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #a78bfa); border-radius: 2px; transition: width linear; width: 100%; }
@@ -184,16 +295,44 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .next-btn:hover { background: #8f7ef9; border-color: #8f7ef9; transform: translateY(-1px); box-shadow: 0 6px 24px var(--accent-glow); }
 .next-btn.show { display: block; }
 
+/* ── SUMMARY ── */
 #page-summary { height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; overflow: hidden; }
 .summary-card { width: 100%; max-width: 680px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; animation: fadeUp 0.4s ease; display: flex; flex-direction: column; max-height: calc(100vh - 4rem); }
 .summary-hero { padding: 2rem 2rem 1.5rem; text-align: center; border-bottom: 1px solid var(--border); position: relative; overflow: visible; flex-shrink: 0; }
 .summary-hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 80% at 50% 120%, var(--accent-glow), transparent); pointer-events: none; }
-.summary-score-ring { width: min(120px, 28vw); height: min(120px, 28vw); margin: 0 auto 1rem; position: relative; flex-shrink: 0; }
-.summary-score-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; overflow: visible; }
+
+/* FIX: score ring — use responsive sizing, no overflow clipping */
+.summary-score-ring {
+  width: min(120px, 28vw);
+  height: min(120px, 28vw);
+  margin: 0 auto 1rem;
+  position: relative;
+  flex-shrink: 0;
+}
+.summary-score-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  display: block;
+  overflow: visible;
+}
 .score-ring-bg { fill: none; stroke: var(--bg3); stroke-width: 8; }
 .score-ring-fill { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round; stroke-dasharray: 283; stroke-dashoffset: 283; transition: stroke-dashoffset 1s ease, stroke 0.5s ease; }
-.score-ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
-.score-ring-number { font-size: clamp(1.1rem, 4vw, 1.5rem); font-weight: 700; line-height: 1; white-space: nowrap; }
+.score-ring-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.score-ring-number {
+  font-size: clamp(1.1rem, 4vw, 1.5rem);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
 .score-ring-label { font-size: clamp(0.55rem, 1.5vw, 0.65rem); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
 .summary-title { font-size: clamp(1rem, 3vw, 1.3rem); font-weight: 700; margin-bottom: 0.3rem; }
 .summary-subtitle { font-size: clamp(0.75rem, 2vw, 0.85rem); color: var(--text-muted); }
@@ -217,7 +356,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .review-ans-row { font-size: 0.78rem; color: var(--text-muted); }
 .review-ans-row .ca { color: var(--correct); }
 .review-ans-row .wa { color: var(--wrong); }
-.summary-actions { padding: 1.25rem 1.75rem; display: flex; gap: 0.75rem; border-top: 1px solid var(--border); flex-shrink: 0; }
+.summary-actions { padding: 1.25rem 1.75rem; display: flex; gap: 0.75rem; border-top: 1px solid var(--border); flex-shrink: 0; position: sticky; bottom: 0; background: var(--bg2); z-index: 2; }
 .action-btn { flex: 1; padding: 0.8rem; border-radius: var(--radius); font-family: 'Sora', sans-serif; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; }
 .action-btn.primary { background: var(--accent); color: white; box-shadow: 0 4px 16px var(--accent-glow); }
 .action-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px var(--accent-glow); }
@@ -225,6 +364,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .action-btn.secondary:hover { border-color: var(--accent); color: var(--accent); }
 .action-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; }
 
+/* ── MODALS ── */
 .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.65); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 1.5rem; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
 .modal-box { background: var(--bg2); border: 1px solid var(--border-hover); border-radius: var(--radius-lg); padding: 2rem 1.75rem; max-width: 380px; width: 100%; text-align: center; transform: translateY(12px); transition: transform 0.25s ease; box-shadow: 0 24px 64px rgba(0,0,0,0.5); }
@@ -241,12 +381,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .modal-btn.primary { background: var(--accent); color: white; box-shadow: 0 4px 16px var(--accent-glow); }
 .modal-btn.primary:hover { background: #8f7ef9; transform: translateY(-1px); }
 
-.passcode-input { width: 100%; background: var(--bg3); border: 1.5px solid var(--border-hover); border-radius: var(--radius); padding: 0.75rem 1rem; font-family: 'Sora', sans-serif; font-size: 1.1rem; font-weight: 600; color: var(--text); text-align: center; letter-spacing: 0.25em; outline: none; transition: border-color 0.2s; margin-bottom: 1rem; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text; }
-.passcode-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-.passcode-input.shake { animation: shake 0.4s ease; border-color: var(--wrong); box-shadow: 0 0 0 3px rgba(248,113,113,0.2); }
-@keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
-.passcode-err { font-size: 0.78rem; color: var(--wrong); margin-top: -0.6rem; margin-bottom: 0.8rem; min-height: 1rem; }
-
+/* ── TOAST ── */
 .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(8px); background: var(--bg3); border: 1px solid var(--border-hover); color: var(--text); padding: 0.65rem 1.25rem; border-radius: 30px; font-size: 0.82rem; font-weight: 500; opacity: 0; transition: all 0.3s ease; pointer-events: none; z-index: 300; white-space: nowrap; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 ::-webkit-scrollbar { width: 6px; }
@@ -254,37 +389,121 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 
+/* ── MOBILE ── */
 @media (max-width: 768px) {
   body { height: auto; overflow: hidden; }
-  #page-landing { flex-direction: column; height: 100vh; overflow: hidden; }
-  .logo-sidebar { width: 100%; height: 52px; border-right: none; border-bottom: 1px solid var(--border); flex-direction: row; align-items: center; justify-content: flex-start; padding: 0 1rem; flex-shrink: 0; }
-  .banks-col { flex: 1; overflow: hidden; min-height: 0; }
+
+  #page-landing {
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .logo-sidebar {
+    width: 100%;
+    height: 52px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 1rem;
+    flex-shrink: 0;
+  }
+
+  .banks-col {
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
   .banks-body { padding: 0.75rem; }
-  .materials-header { flex-wrap: nowrap; gap: 0.4rem; padding: 0.7rem 0.85rem; }
+
+  .materials-header {
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+    padding: 0.7rem 0.85rem;
+  }
   .materials-title { font-size: 0.68rem; }
   .search-input { min-width: 0; flex: 1; font-size: 0.72rem; }
-  .settings-col { width: 100%; border-left: none; border-top: 1px solid var(--border); padding: 0.85rem 1rem; flex-direction: column; gap: 0.6rem; flex-shrink: 0; overflow: visible; }
-  .settings-list { flex-direction: row; flex-wrap: wrap; gap: 0.4rem; }
-  .setting-row { border-bottom: none; padding: 0.4rem 0.65rem; background: var(--bg3); border-radius: 8px; gap: 0.5rem; flex: 1; min-width: 80px; }
+
+  .settings-col {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding: 0.85rem 1rem;
+    flex-direction: column;
+    gap: 0.6rem;
+    flex-shrink: 0;
+    overflow: visible;
+  }
+  .settings-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .setting-row {
+    border-bottom: none;
+    padding: 0.4rem 0.65rem;
+    background: var(--bg3);
+    border-radius: 8px;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 80px;
+  }
   .setting-label { font-size: 0.75rem; }
   .settings-spacer { display: none; }
   .start-btn { padding: 0.75rem; font-size: 0.85rem; }
   .err-msg { text-align: left; }
+
   #page-exam { height: 100vh; }
   .exam-header { padding: 0.75rem 1rem; gap: 0.85rem; }
-  .exam-body { padding: 1.25rem 1rem; }
+  .exam-body { padding: 1.25rem 1rem 5rem; }
   .question-text { font-size: 1rem; }
   .choice-btn { padding: 0.85rem 1rem; font-size: 0.88rem; }
-  #page-summary { height: 100vh; padding: 0; overflow: hidden; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; }
-  .summary-card { max-width: 100%; border-radius: 0; border: none; height: 100vh; max-height: 100vh; }
-  .summary-hero { padding: 1rem 1rem 0.75rem; overflow: visible; }
-  .summary-score-ring { width: min(80px, 22vw); height: min(80px, 22vw); margin-bottom: 0.6rem; }
+
+  #page-summary {
+    height: 100vh;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+  .summary-card {
+    max-width: 100%;
+    border-radius: 0;
+    border: none;
+    height: 100vh;
+    max-height: 100vh;
+  }
+  /* FIX: on mobile allow hero to shrink, no overflow clip */
+  .summary-hero {
+    padding: 1rem 1rem 0.75rem;
+    overflow: visible;
+  }
+  .summary-score-ring {
+    width: min(80px, 22vw);
+    height: min(80px, 22vw);
+    margin-bottom: 0.6rem;
+  }
   .summary-title { font-size: clamp(0.95rem, 4vw, 1.1rem); }
   .summary-subtitle { font-size: clamp(0.72rem, 2.5vw, 0.8rem); }
   .stat-cell { padding: 0.65rem 0.4rem; }
   .summary-review { padding: 0.85rem 1rem; }
-  .summary-actions { padding: 0.75rem 1rem; background: var(--bg2); border-top: 1px solid var(--border); }
-  .format-popover { top: auto; bottom: calc(100% + 8px); right: auto; left: 0; width: 280px; }
+  .summary-actions {
+    padding: 0.75rem 1rem;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+  }
+
+  .format-popover {
+    top: auto;
+    bottom: calc(100% + 8px);
+    right: auto;
+    left: 0;
+    width: 280px;
+  }
 }
 
 @media (max-width: 400px) {
@@ -296,6 +515,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 </head>
 <body>
 
+<!-- SPLASH -->
 <div id="page-splash">
   <div class="splash-logo">
     <svg width="100" height="100" viewBox="0 0 56 56" fill="none">
@@ -309,6 +529,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   </div>
 </div>
 
+<!-- DRAG OVERLAY -->
 <div class="drag-overlay" id="drag-overlay">
   <div class="drag-overlay-rings">
     <div class="drag-ring"></div>
@@ -322,6 +543,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   </div>
 </div>
 
+<!-- LANDING -->
 <div id="page-landing" class="page hidden">
   <div class="logo-sidebar">
     <svg width="40" height="40" viewBox="0 0 56 56" fill="none">
@@ -407,6 +629,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   </div>
 </div>
 
+<!-- EXAM -->
 <div id="page-exam" class="page hidden">
   <header class="exam-header">
     <button class="home-btn" id="quit-btn" title="Quit quiz">
@@ -429,6 +652,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   </div>
 </div>
 
+<!-- SUMMARY -->
 <div id="page-summary" class="page hidden">
   <div class="summary-card">
     <div class="summary-hero">
@@ -461,6 +685,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   </div>
 </div>
 
+<!-- QUIT MODAL -->
 <div class="modal-overlay" id="quit-modal">
   <div class="modal-box">
     <div class="modal-icon">🚪</div>
@@ -473,6 +698,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   </div>
 </div>
 
+<!-- DELETE MODAL -->
 <div class="modal-overlay" id="delete-modal">
   <div class="modal-box">
     <div class="modal-icon">🗑️</div>
@@ -485,18 +711,24 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   </div>
 </div>
 
+<!-- SHARED BANK START MODAL -->
 <div class="modal-overlay" id="shared-start-modal">
-  <div class="modal-box" style="max-width:440px;">
-    <div class="shared-modal-icon">📋</div>
-    <div class="modal-title" id="shared-modal-title">Ready to start?</div>
-    <div class="shared-bank-card" id="shared-bank-info">
-      <div class="shared-bank-card-name">
-        <span>📋</span>
-        <span id="shared-bank-name">Loading…</span>
-      </div>
-      <div class="shared-bank-card-meta" id="shared-bank-meta">Loading questions…</div>
+  <div class="modal-box" id="shared-modal-box">
+    <div class="shared-modal-icon-wrap">
+      <svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
     </div>
-    <div class="settings-list" style="margin-bottom:1.25rem;">
+    <div class="modal-title" id="shared-modal-title" style="position:relative;z-index:1;">Ready to start?</div>
+    <div class="modal-desc" id="shared-modal-desc" style="margin-bottom:1.25rem;position:relative;z-index:1;">Your quiz is loading from Drive…</div>
+    <div class="shared-bank-card shared-loading" id="shared-bank-info">
+      <div class="shared-bank-card-icon">
+        <svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+      </div>
+      <div class="shared-bank-card-body">
+        <div class="shared-bank-card-name" id="shared-bank-name">Loading…</div>
+        <div class="shared-bank-card-meta" id="shared-bank-meta">Fetching questions…</div>
+      </div>
+    </div>
+    <div class="settings-list" style="margin-bottom:0;">
       <div class="shared-settings-row">
         <div class="shared-settings-label">Mastery mode</div>
         <label class="toggle"><input type="checkbox" id="shared-toggle-mastery" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
@@ -505,26 +737,14 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
         <div class="shared-settings-label">Shuffle questions</div>
         <label class="toggle"><input type="checkbox" id="shared-toggle-shuffle" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
       </div>
-      <div class="shared-settings-row" style="border-bottom:none;">
+      <div class="shared-settings-row">
         <div class="shared-settings-label">Auto-advance</div>
         <label class="toggle"><input type="checkbox" id="shared-toggle-auto" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
       </div>
     </div>
     <div class="shared-modal-actions">
       <button class="modal-btn primary" id="shared-start-btn" disabled>Start Quiz →</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="passcode-modal">
-  <div class="modal-box">
-    <div class="modal-icon">🔐</div>
-    <div class="modal-title">Admin Access</div>
-    <div class="modal-desc">Enter the passcode to access the question bank manager.</div>
-    <input class="passcode-input" id="passcode-input" type="password" placeholder="••••••" maxlength="20" autocomplete="off">
-    <div class="passcode-err" id="passcode-err"></div>
-    <div class="modal-actions">
-      <button class="modal-btn primary" id="passcode-submit">Unlock →</button>
+      <button id="shared-retry-btn">↺ Retry loading</button>
     </div>
   </div>
 </div>
@@ -542,8 +762,9 @@ let sessionQuestions = [], wrongPool = [], sessionResults = [];
 let currentIdx = 0, correctCount = 0, wrongCount = 0;
 let autoTimer = null, pendingDeleteId = null;
 let totalUniqueQuestions = 0, searchQuery = '';
+// shared link mode: only show retry, no back-to-banks
 let isSharedMode = false;
-let sharedBankData = null;
+let sharedBankData = null; // { id, name, questions }
 
 const $ = id => document.getElementById(id);
 
@@ -577,6 +798,7 @@ window.addEventListener('DOMContentLoaded', () => {
   updateUploadBtn();
   window.addEventListener('resize', updateUploadBtn);
 
+  // ── Check for shared bank in URL ──
   const urlParams = new URLSearchParams(window.location.search);
   const sharedBankId = urlParams.get('bank');
 
@@ -586,14 +808,18 @@ window.addEventListener('DOMContentLoaded', () => {
       $('page-splash').classList.add('hidden');
 
       if (sharedBankId && GAS_READY) {
+        // Shared link mode: skip landing, show start modal
         isSharedMode = true;
         $('page-landing').classList.add('hidden');
         loadSharedBank(sharedBankId);
       } else {
-        showPasscodeGate();
+        $('page-landing').classList.remove('hidden');
       }
     }, 600);
   }, 1800);
+
+  if (GAS_READY) { $('config-banner').classList.add('hidden'); if (!sharedBankId) loadBanksFromGAS(); }
+  else { $('add-bank-btn').disabled = true; }
 
   $('refresh-btn').addEventListener('click', () => loadBanksFromGAS());
   $('add-bank-btn').addEventListener('click', () => $('file-input').click());
@@ -608,9 +834,11 @@ window.addEventListener('DOMContentLoaded', () => {
   $('btn-landing').addEventListener('click', () => goLanding());
   $('btn-retake').addEventListener('click', () => retakeSession());
   $('shared-start-btn').addEventListener('click', () => startSharedSession());
-
-  $('passcode-submit').addEventListener('click', () => submitPasscode());
-  $('passcode-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitPasscode(); });
+  $('shared-retry-btn').addEventListener('click', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('bank');
+    if (id) { $('shared-retry-btn').style.display = 'none'; loadSharedBank(id); }
+  });
 
   $('search-input').addEventListener('input', e => {
     searchQuery = e.target.value.toLowerCase().trim();
@@ -639,49 +867,15 @@ window.addEventListener('DOMContentLoaded', () => {
   setupDragOverlay();
 });
 
-function showPasscodeGate() {
-  $('passcode-modal').classList.add('open');
-  $('passcode-err').textContent = '';
-  $('passcode-input').value = '';
-  setTimeout(() => $('passcode-input').focus(), 300);
-}
-
-async function submitPasscode() {
-  const val = $('passcode-input').value.trim();
-  if (!val) return;
-  $('passcode-submit').textContent = 'Checking…';
-  $('passcode-submit').disabled = true;
-  try {
-    const data = await gasGet({ action: 'verify', code: val });
-    if (data.ok) {
-      $('passcode-modal').classList.remove('open');
-      $('page-landing').classList.remove('hidden');
-      if (GAS_READY) {
-        $('config-banner').classList.add('hidden');
-        loadBanksFromGAS();
-      }
-    } else {
-      const inp = $('passcode-input');
-      inp.classList.remove('shake');
-      void inp.offsetWidth;
-      inp.classList.add('shake');
-      $('passcode-err').textContent = 'Incorrect passcode. Try again.';
-      inp.value = '';
-      setTimeout(() => inp.classList.remove('shake'), 400);
-    }
-  } catch (e) {
-    $('passcode-err').textContent = 'Network error. Try again.';
-  } finally {
-    $('passcode-submit').textContent = 'Unlock →';
-    $('passcode-submit').disabled = false;
-  }
-}
-
+// ── SHARED BANK LOADING ──
 async function loadSharedBank(fileId) {
   $('shared-bank-name').textContent = 'Loading…';
   $('shared-bank-meta').textContent = 'Fetching questions from Drive…';
+  $('shared-modal-desc').textContent = 'Your quiz is loading from Drive…';
+  $('shared-bank-info').classList.add('shared-loading');
   $('shared-start-modal').classList.add('open');
   $('shared-start-btn').disabled = true;
+  $('shared-retry-btn').style.display = 'none';
 
   try {
     const listData = await gasGet({ action: 'list' });
@@ -699,12 +893,17 @@ async function loadSharedBank(fileId) {
     sharedBankData = { id: fileId, name: bankName, questions };
     $('shared-bank-name').textContent = bankName;
     $('shared-bank-meta').textContent = `${questions.length} questions ready`;
+    $('shared-modal-desc').textContent = 'Pick your settings and hit start.';
+    $('shared-bank-info').classList.remove('shared-loading');
     $('shared-start-btn').disabled = false;
     $('shared-modal-title').textContent = 'Ready to start?';
   } catch (err) {
     $('shared-bank-name').textContent = 'Error loading bank';
     $('shared-bank-meta').textContent = err.message;
+    $('shared-modal-desc').textContent = 'Could not load the quiz from Drive.';
+    $('shared-bank-info').classList.remove('shared-loading');
     $('shared-modal-title').textContent = 'Could not load bank';
+    $('shared-retry-btn').style.display = 'block';
   }
 }
 
@@ -712,10 +911,12 @@ function startSharedSession() {
   if (!sharedBankData) return;
   $('shared-start-modal').classList.remove('open');
 
-  $('toggle-mastery').checked = $('shared-toggle-mastery').checked;
-  $('toggle-shuffle').checked = $('shared-toggle-shuffle').checked;
-  $('toggle-auto').checked    = $('shared-toggle-auto').checked;
+  // Override main toggles with shared modal settings
+  $('toggle-mastery').checked  = $('shared-toggle-mastery').checked;
+  $('toggle-shuffle').checked  = $('shared-toggle-shuffle').checked;
+  $('toggle-auto').checked     = $('shared-toggle-auto').checked;
 
+  // Lock selected banks to the shared one
   banks = [{ ...sharedBankData }];
   selectedIds = new Set([sharedBankData.id]);
 
@@ -796,6 +997,7 @@ async function fetchBankQuestions(bank) {
 function parseWorkbook(ab) {
   const wb = XLSX.read(ab, { type: 'array' });
   const ws = wb.Sheets[wb.SheetNames[0]];
+  // FIX: Use raw:false to preserve line breaks in cells, then handle them manually
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
   if (rows.length < 2) throw new Error('No data found.');
   const firstRow = rows[0].map(h => String(h).toLowerCase().trim());
@@ -820,6 +1022,7 @@ function parseWorkbook(ab) {
     const cd  = String(r[dI]   || '').trim();
     const ce  = String(r[eI]   || '').trim();
     const ans = String(r[ansI] || '').trim().toUpperCase().charAt(0);
+    // FIX: preserve line breaks from Excel — \n, \r\n, and soft-return \r all normalized
     const exp = String(r[expI] || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
     if (!q || !ca || !ans) continue;
     const choices = [{ letter: 'A', text: ca }];
@@ -866,6 +1069,7 @@ function copyShareLink(bankId, bankName) {
   navigator.clipboard.writeText(link).then(() => {
     showToast(`🔗 Link for "${bankName}" copied!`);
   }).catch(() => {
+    // Fallback for older browsers
     const ta = document.createElement('textarea');
     ta.value = link;
     document.body.appendChild(ta);
@@ -977,10 +1181,10 @@ function renderQuestion() {
     ? Math.round((correctCount / totalUniqueQuestions) * 100)
     : Math.round((currentIdx / sessionQuestions.length) * 100);
 
-  $('prog-cur').textContent   = displayCur;
+  $('prog-cur').textContent  = displayCur;
   $('prog-total').textContent = displayTotal;
-  $('prog-pct').textContent   = progressPct + '%';
-  $('prog-fill').style.width  = progressPct + '%';
+  $('prog-pct').textContent  = progressPct + '%';
+  $('prog-fill').style.width = progressPct + '%';
   $('hdr-c').textContent = correctCount + ' ✓';
   $('hdr-w').textContent = wrongCount + ' ✗';
   $('score-chips').style.display = masteryOn ? 'none' : 'flex';
@@ -1014,7 +1218,6 @@ function clearAutoAdvance() { if (autoTimer) { clearTimeout(autoTimer); autoTime
 function submitAnswer(selected, btnEl, q, card) {
   clearAutoAdvance();
   const isCorrect = selected === q.answer;
-  const autoOn    = $('toggle-auto').checked;
 
   card.querySelectorAll('.choice-btn').forEach(b => {
     b.disabled = true;
@@ -1032,6 +1235,9 @@ function submitAnswer(selected, btnEl, q, card) {
   feedback.textContent = isCorrect ? '✓ Correct' : '✗ Incorrect';
   card.appendChild(feedback);
 
+  const masteryOn = $('toggle-mastery').checked;
+  const autoOn    = $('toggle-auto').checked;
+
   if (q.explanation && !autoOn) {
     const reveal = document.createElement('div');
     reveal.className = 'answer-reveal ' + (isCorrect ? 'reveal-correct' : 'reveal-wrong');
@@ -1041,7 +1247,6 @@ function submitAnswer(selected, btnEl, q, card) {
     card.appendChild(reveal);
   }
 
-  const masteryOn = $('toggle-mastery').checked;
   if (masteryOn && !isCorrect) sessionQuestions.push(shuffleChoices(q));
 
   const isLast  = currentIdx + 1 >= sessionQuestions.length;
@@ -1065,12 +1270,13 @@ function submitAnswer(selected, btnEl, q, card) {
 function showSummary() {
   showPage('page-summary');
 
+  // ── Shared mode: hide "Back to Banks", show only "Retry" ──
   const backBtn = $('btn-landing');
   backBtn.style.display = isSharedMode ? 'none' : '';
 
-  const masteryOn      = $('toggle-mastery').checked;
-  const total          = totalUniqueQuestions;
-  const totalAttempts  = sessionResults.length;
+  const masteryOn    = $('toggle-mastery').checked;
+  const total        = totalUniqueQuestions;
+  const totalAttempts = sessionResults.length;
   const firstTryCorrect = sessionResults.filter((r, i) => {
     if (!r.isCorrect) return false;
     return sessionResults.slice(0, i).filter(x => x.q.question === r.q.question).length === 0;
@@ -1092,11 +1298,11 @@ function showSummary() {
   $('score-ring-label-text').textContent = masteryOn ? '1st Try' : 'Score';
 
   if (masteryOn) {
-    $('sum-title').textContent     = '🏆 All Mastered!';
-    $('sum-sub').textContent       = `${total} questions mastered in ${totalAttempts} attempts`;
-    $('sum-correct').textContent   = total;       $('label-correct').textContent = 'Mastered';
-    $('sum-wrong').textContent     = retries;     $('label-wrong').textContent   = 'Retries';
-    $('sum-total').textContent     = firstTryPct + '%'; $('label-total').textContent = 'Accuracy';
+    $('sum-title').textContent = '🏆 All Mastered!';
+    $('sum-sub').textContent   = `${total} questions mastered in ${totalAttempts} attempts`;
+    $('sum-correct').textContent = total;     $('label-correct').textContent = 'Mastered';
+    $('sum-wrong').textContent   = retries;   $('label-wrong').textContent   = 'Retries';
+    $('sum-total').textContent   = firstTryPct + '%'; $('label-total').textContent = 'Accuracy';
   } else {
     $('sum-title').textContent = pct===100?'Perfect score!':pct>=80?'Great work!':pct>=60?'Good effort':'Keep practicing';
     $('sum-sub').textContent   = `${correctCount} of ${total} correct`;
@@ -1142,7 +1348,8 @@ function confirmQuit() {
   clearAutoAdvance();
   closeQuitModal();
   if (isSharedMode) {
-    showPage('page-landing');
+    // In shared mode, quitting goes back to the start modal
+    showPage('page-landing'); // hide exam
     $('page-landing').classList.add('hidden');
     $('shared-start-modal').classList.add('open');
   } else {
