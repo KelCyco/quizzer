@@ -381,6 +381,12 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .modal-btn.primary { background: var(--accent); color: white; box-shadow: 0 4px 16px var(--accent-glow); }
 .modal-btn.primary:hover { background: #8f7ef9; transform: translateY(-1px); }
 
+.passcode-input { width: 100%; background: var(--bg3); border: 1.5px solid var(--border-hover); border-radius: var(--radius); padding: 0.75rem 1rem; font-family: 'Sora', sans-serif; font-size: 1.1rem; font-weight: 600; color: var(--text); text-align: center; letter-spacing: 0.25em; outline: none; transition: border-color 0.2s; margin-bottom: 1rem; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text; }
+.passcode-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.passcode-input.shake { animation: shake 0.4s ease; border-color: var(--wrong); box-shadow: 0 0 0 3px rgba(248,113,113,0.2); }
+@keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
+.passcode-err { font-size: 0.78rem; color: var(--wrong); margin-top: -0.6rem; margin-bottom: 0.8rem; min-height: 1rem; }
+
 /* ── TOAST ── */
 .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(8px); background: var(--bg3); border: 1px solid var(--border-hover); color: var(--text); padding: 0.65rem 1.25rem; border-radius: 30px; font-size: 0.82rem; font-weight: 500; opacity: 0; transition: all 0.3s ease; pointer-events: none; z-index: 300; white-space: nowrap; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -749,6 +755,19 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   </div>
 </div>
 
+<div class="modal-overlay" id="passcode-modal">
+  <div class="modal-box">
+    <div class="modal-icon">🔐</div>
+    <div class="modal-title">Admin Access</div>
+    <div class="modal-desc">Enter the passcode to access the question bank manager.</div>
+    <input class="passcode-input" id="passcode-input" type="password" placeholder="••••••" maxlength="20" autocomplete="off">
+    <div class="passcode-err" id="passcode-err"></div>
+    <div class="modal-actions">
+      <button class="modal-btn primary" id="passcode-submit">Unlock →</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -813,7 +832,7 @@ window.addEventListener('DOMContentLoaded', () => {
         $('page-landing').classList.add('hidden');
         loadSharedBank(sharedBankId);
       } else {
-        $('page-landing').classList.remove('hidden');
+        showPasscodeGate();
       }
     }, 600);
   }, 1800);
@@ -834,6 +853,9 @@ window.addEventListener('DOMContentLoaded', () => {
   $('btn-landing').addEventListener('click', () => goLanding());
   $('btn-retake').addEventListener('click', () => retakeSession());
   $('shared-start-btn').addEventListener('click', () => startSharedSession());
+  $('passcode-submit').addEventListener('click', () => submitPasscode());
+  $('passcode-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitPasscode(); });
+
   $('shared-retry-btn').addEventListener('click', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get('bank');
@@ -866,6 +888,45 @@ window.addEventListener('DOMContentLoaded', () => {
 
   setupDragOverlay();
 });
+
+// Admin Access
+function showPasscodeGate() {
+  $('passcode-modal').classList.add('open');
+  $('passcode-err').textContent = '';
+  $('passcode-input').value = '';
+  setTimeout(() => $('passcode-input').focus(), 300);
+}
+
+async function submitPasscode() {
+  const val = $('passcode-input').value.trim();
+  if (!val) return;
+  $('passcode-submit').textContent = 'Checking…';
+  $('passcode-submit').disabled = true;
+  try {
+    const data = await gasGet({ action: 'verify', code: val });
+    if (data.ok) {
+      $('passcode-modal').classList.remove('open');
+      $('page-landing').classList.remove('hidden');
+      if (GAS_READY) {
+        $('config-banner').classList.add('hidden');
+        loadBanksFromGAS();
+      }
+    } else {
+      const inp = $('passcode-input');
+      inp.classList.remove('shake');
+      void inp.offsetWidth;
+      inp.classList.add('shake');
+      $('passcode-err').textContent = 'Incorrect passcode. Try again.';
+      inp.value = '';
+      setTimeout(() => inp.classList.remove('shake'), 400);
+    }
+  } catch (e) {
+    $('passcode-err').textContent = 'Network error. Try again.';
+  } finally {
+    $('passcode-submit').textContent = 'Unlock →';
+    $('passcode-submit').disabled = false;
+  }
+}
 
 // ── SHARED BANK LOADING ──
 async function loadSharedBank(fileId) {
