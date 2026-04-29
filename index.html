@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Quizzer</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 56'%3E%3Crect width='56' height='56' rx='14' fill='%231e1e28'/%3E%3Crect x='14' y='16' width='28' height='4' rx='2' fill='%237c6af7'/%3E%3Crect x='14' y='26' width='20' height='4' rx='2' fill='%237c6af7' opacity='.6'/%3E%3Crect x='14' y='36' width='24' height='4' rx='2' fill='%237c6af7' opacity='.35'/%3E%3Ccircle cx='42' cy='38' r='7' fill='%234ade80'/%3E%3Cpolyline points='38.5,38 41,40.5 45.5,35.5' stroke='%230f1f0f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&display=swap" rel="stylesheet">
@@ -29,6 +29,7 @@
   --radius-lg: 20px;
   --sidebar: 64px;
   --settings-col: 200px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -38,20 +39,14 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .page { position: relative; z-index: 1; }
 .hidden { display: none !important; }
 
-/* ── SPLASH ── */
 #page-splash { position: fixed; inset: 0; z-index: 999; background: var(--bg); display: flex; align-items: center; justify-content: center; transition: opacity 0.6s ease; }
 #page-splash.fade-out { opacity: 0; pointer-events: none; }
 .splash-logo { animation: splashIn 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards; opacity: 0; }
 .splash-logo svg { filter: drop-shadow(0 0 32px rgba(124,106,247,0.5)); }
 @keyframes splashIn { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: scale(1); } }
 
-/* ── LANDING — 3 column desktop ── */
 #page-landing { height: 100vh; display: flex; overflow: hidden; }
-
-/* Col 1: logo sidebar */
 .logo-sidebar { width: var(--sidebar); flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: center; padding: 1.1rem 0; }
-
-/* Col 2: banks */
 .banks-col { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
 .config-banner { background: rgba(247,192,106,0.08); border-bottom: 1px solid rgba(247,192,106,0.25); padding: 0.6rem 1.1rem; display: flex; align-items: center; gap: 0.6rem; font-size: 0.75rem; color: #f7c06a; flex-shrink: 0; }
 .config-banner-icon { font-size: 0.85rem; }
@@ -84,9 +79,19 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .format-note { font-size: 0.66rem; color: var(--text-dim); margin-top: 0.6rem; line-height: 1.5; }
 .format-note strong { color: var(--text); font-weight: 500; }
 #file-input { display: none; }
-.materials-empty { padding: 2rem; text-align: center; color: var(--text-dim); font-size: 0.82rem; line-height: 1.7; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.materials-empty-icon { font-size: 1.6rem; margin-bottom: 0.5rem; opacity: 0.4; }
-.bank-list { padding: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; overflow-y: auto; flex: 1; }
+
+.folder-tabs-bar { display: flex; gap: 0; overflow-x: auto; padding: 0.5rem 0.75rem 0; border-bottom: 1px solid var(--border); flex-shrink: 0; scrollbar-width: none; }
+.folder-tabs-bar::-webkit-scrollbar { display: none; }
+.folder-tab { padding: 0.4rem 0.85rem; border-radius: 7px 7px 0 0; font-size: 0.72rem; font-weight: 500; color: var(--text-muted); cursor: pointer; transition: all 0.18s; white-space: nowrap; border: 1px solid transparent; border-bottom: none; flex-shrink: 0; background: transparent; position: relative; bottom: -1px; }
+.folder-tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+.folder-tab.active { color: var(--text); background: var(--bg3); border-color: var(--border); border-bottom-color: var(--bg3); }
+
+.bank-pane { flex: 1; overflow-y: auto; display: flex; flex-direction: column; min-height: 0; }
+.bank-pane-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; color: var(--text-dim); font-size: 0.82rem; line-height: 1.7; text-align: center; padding: 2rem; }
+.bank-pane-empty-icon { font-size: 1.8rem; opacity: 0.18; margin-bottom: 0.25rem; }
+.bank-pane-loading { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.65rem; color: var(--text-muted); font-size: 0.82rem; }
+.spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(124,106,247,0.2); border-top-color: var(--accent); animation: spin 0.7s linear infinite; flex-shrink: 0; }
+.bank-list { padding: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; }
 .bank-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 0.8rem; border-radius: 9px; border: 1.5px solid var(--border); background: var(--bg3); transition: all 0.2s; cursor: pointer; position: relative; flex-shrink: 0; }
 .bank-item:hover { border-color: var(--border-hover); background: #23232f; }
 .bank-item.selected { border-color: var(--accent); background: rgba(124,106,247,0.08); }
@@ -103,7 +108,6 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .bank-delete { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 0.8rem; padding: 0.25rem; border-radius: 5px; transition: all 0.2s; flex-shrink: 0; line-height: 1; }
 .bank-delete:hover { color: var(--wrong); background: var(--wrong-bg); }
 
-/* Col 3: settings */
 .settings-col { width: var(--settings-col); flex-shrink: 0; background: var(--bg2); border-left: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.25rem 1rem; gap: 1rem; overflow-y: auto; }
 .settings-title { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-muted); }
 .settings-list { display: flex; flex-direction: column; }
@@ -122,7 +126,6 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .start-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 24px var(--accent-glow); }
 .start-btn:disabled { opacity: 0.35; cursor: not-allowed; box-shadow: none; }
 
-/* ── DRAG OVERLAY ── */
 .drag-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(10,10,16,0.93); display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
 .drag-overlay.active { opacity: 1; pointer-events: all; }
 .drag-overlay-rings { position: relative; display: flex; align-items: center; justify-content: center; }
@@ -136,81 +139,15 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .drag-title { font-size: 1.2rem; font-weight: 600; color: var(--text); }
 .drag-sub { font-size: 0.85rem; color: var(--text-muted); }
 
-/* ── SHARED BANK START MODAL ── */
-/* ambient glow behind the entire shared modal overlay */
-#shared-start-modal {
-  background: rgba(0,0,0,0.72);
-}
-#shared-start-modal::before {
-  content: '';
-  position: fixed;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 520px; height: 520px;
-  background: radial-gradient(circle, rgba(124,106,247,0.18) 0%, transparent 65%);
-  pointer-events: none;
-  animation: ambientBreath 5s ease-in-out infinite alternate;
-  z-index: 0;
-}
-@keyframes ambientBreath {
-  from { opacity: 0.7; transform: translate(-50%,-50%) scale(0.95); }
-  to   { opacity: 1;   transform: translate(-50%,-50%) scale(1.08); }
-}
-#shared-start-modal .modal-box {
-  max-width: 420px;
-  background: var(--bg2);
-  overflow: hidden;
-  position: relative;
-  z-index: 1;
-  border: 1px solid rgba(124,106,247,0.2);
-  box-shadow: 0 0 0 1px rgba(124,106,247,0.08), 0 32px 80px rgba(0,0,0,0.6);
-}
-/* small icon above title — SVG-based, no emoji */
-.shared-modal-icon-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1rem;
-  width: 48px; height: 48px;
-  border-radius: 12px;
-  background: rgba(124,106,247,0.12);
-  border: 1px solid rgba(124,106,247,0.25);
-}
-.shared-modal-icon-wrap svg {
-  width: 24px; height: 24px;
-  stroke: var(--accent);
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.shared-bank-card {
-  background: var(--bg3);
-  border: 1px solid var(--border-hover);
-  border-radius: var(--radius);
-  padding: 0.85rem 1rem;
-  margin-bottom: 1.25rem;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.shared-bank-card-icon {
-  width: 34px; height: 34px;
-  border-radius: 8px;
-  background: rgba(124,106,247,0.12);
-  border: 1px solid rgba(124,106,247,0.2);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.shared-bank-card-icon svg {
-  width: 16px; height: 16px;
-  stroke: var(--accent);
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
+#shared-start-modal { background: rgba(0,0,0,0.72); }
+#shared-start-modal::before { content: ''; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 520px; height: 520px; background: radial-gradient(circle, rgba(124,106,247,0.18) 0%, transparent 65%); pointer-events: none; animation: ambientBreath 5s ease-in-out infinite alternate; z-index: 0; }
+@keyframes ambientBreath { from { opacity: 0.7; transform: translate(-50%,-50%) scale(0.95); } to { opacity: 1; transform: translate(-50%,-50%) scale(1.08); } }
+#shared-start-modal .modal-box { max-width: 420px; background: var(--bg2); overflow: hidden; position: relative; z-index: 1; border: 1px solid rgba(124,106,247,0.2); box-shadow: 0 0 0 1px rgba(124,106,247,0.08), 0 32px 80px rgba(0,0,0,0.6); }
+.shared-modal-icon-wrap { display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; width: 48px; height: 48px; border-radius: 12px; background: rgba(124,106,247,0.12); border: 1px solid rgba(124,106,247,0.25); }
+.shared-modal-icon-wrap svg { width: 24px; height: 24px; stroke: var(--accent); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.shared-bank-card { background: var(--bg3); border: 1px solid var(--border-hover); border-radius: var(--radius); padding: 0.85rem 1rem; margin-bottom: 1.25rem; text-align: left; display: flex; align-items: center; gap: 0.75rem; }
+.shared-bank-card-icon { width: 34px; height: 34px; border-radius: 8px; background: rgba(124,106,247,0.12); border: 1px solid rgba(124,106,247,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.shared-bank-card-icon svg { width: 16px; height: 16px; stroke: var(--accent); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .shared-bank-card-body { flex: 1; min-width: 0; }
 .shared-bank-card-name { font-size: 0.92rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .shared-bank-card-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.15rem; }
@@ -218,38 +155,14 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .shared-settings-row:last-child { border-bottom: none; }
 .shared-settings-label { font-size: 0.85rem; color: var(--text); }
 .shared-modal-actions { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1.25rem; }
-#shared-start-btn {
-  background: var(--accent);
-  border: none;
-  box-shadow: 0 4px 20px rgba(124,106,247,0.4);
-  transition: all 0.25s;
-  font-size: 0.95rem;
-  padding: 0.85rem;
-}
-#shared-start-btn:not(:disabled):hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(124,106,247,0.5);
-  background: #8f7ef9;
-}
+#shared-start-btn { background: var(--accent); border: none; box-shadow: 0 4px 20px rgba(124,106,247,0.4); transition: all 0.25s; font-size: 0.95rem; padding: 0.85rem; }
+#shared-start-btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(124,106,247,0.5); background: #8f7ef9; }
 #shared-start-btn:disabled { opacity: 0.35; box-shadow: none; cursor: not-allowed; }
-#shared-retry-btn {
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid var(--border-hover);
-  font-family: 'Sora', sans-serif;
-  font-size: 0.82rem;
-  font-weight: 500;
-  border-radius: var(--radius);
-  padding: 0.6rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: none;
-}
+#shared-retry-btn { background: transparent; color: var(--text-muted); border: 1px solid var(--border-hover); font-family: 'Sora', sans-serif; font-size: 0.82rem; font-weight: 500; border-radius: var(--radius); padding: 0.6rem; cursor: pointer; transition: all 0.2s; display: none; }
 #shared-retry-btn:hover { border-color: var(--accent); color: var(--accent); }
 .shared-loading .shared-bank-card-meta { animation: loadingPulse 1.4s ease-in-out infinite; }
 @keyframes loadingPulse { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
 
-/* ── EXAM ── */
 #page-exam { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 .exam-header { padding: 1rem 2rem; display: flex; align-items: center; gap: 1.5rem; border-bottom: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; }
 .home-btn { background: var(--bg3); border: 1px solid var(--border-hover); color: var(--text-muted); border-radius: 8px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
@@ -262,7 +175,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .score-chip { padding: 0.25rem 0.65rem; border-radius: 20px; font-size: 0.75rem; font-weight: 500; }
 .score-chip.c { background: var(--correct-bg); border: 1px solid var(--correct-border); color: var(--correct); }
 .score-chip.w { background: var(--wrong-bg); border: 1px solid var(--wrong-border); color: var(--wrong); }
-.exam-body { flex: 1; overflow-y: auto; display: flex; align-items: flex-start; justify-content: center; padding: 3rem 1.5rem 5rem; }
+.exam-body { flex: 1; overflow-y: auto; display: flex; align-items: flex-start; justify-content: center; padding: 3rem 1.5rem calc(3rem + env(safe-area-inset-bottom, 0px) + 60px); }
 .question-card { width: 100%; max-width: 720px; animation: fadeUp 0.35s ease; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 .question-meta { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
@@ -287,7 +200,6 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .reveal-correct { background: var(--correct-bg); border: 1px solid var(--correct-border); }
 .reveal-wrong { background: var(--wrong-bg); border: 1px solid var(--wrong-border); }
 .reveal-body { padding: 0.9rem 1.1rem; font-family: 'Source Serif 4', serif; font-size: 0.86rem; line-height: 1.8; color: var(--text); }
-/* FIX: explanation line breaks */
 .reveal-body .exp-text { white-space: pre-wrap; display: block; margin-top: 0.35rem; }
 .auto-bar-wrap { width: 100%; height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-top: 0.75rem; }
 .auto-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #a78bfa); border-radius: 2px; transition: width linear; width: 100%; }
@@ -295,44 +207,16 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .next-btn:hover { background: #8f7ef9; border-color: #8f7ef9; transform: translateY(-1px); box-shadow: 0 6px 24px var(--accent-glow); }
 .next-btn.show { display: block; }
 
-/* ── SUMMARY ── */
 #page-summary { height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; overflow: hidden; }
 .summary-card { width: 100%; max-width: 680px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; animation: fadeUp 0.4s ease; display: flex; flex-direction: column; max-height: calc(100vh - 4rem); }
 .summary-hero { padding: 2rem 2rem 1.5rem; text-align: center; border-bottom: 1px solid var(--border); position: relative; overflow: visible; flex-shrink: 0; }
 .summary-hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 80% at 50% 120%, var(--accent-glow), transparent); pointer-events: none; }
-
-/* FIX: score ring — use responsive sizing, no overflow clipping */
-.summary-score-ring {
-  width: min(120px, 28vw);
-  height: min(120px, 28vw);
-  margin: 0 auto 1rem;
-  position: relative;
-  flex-shrink: 0;
-}
-.summary-score-ring svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-  display: block;
-  overflow: visible;
-}
+.summary-score-ring { width: min(120px, 28vw); height: min(120px, 28vw); margin: 0 auto 1rem; position: relative; flex-shrink: 0; }
+.summary-score-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; overflow: visible; }
 .score-ring-bg { fill: none; stroke: var(--bg3); stroke-width: 8; }
 .score-ring-fill { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round; stroke-dasharray: 283; stroke-dashoffset: 283; transition: stroke-dashoffset 1s ease, stroke 0.5s ease; }
-.score-ring-text {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-.score-ring-number {
-  font-size: clamp(1.1rem, 4vw, 1.5rem);
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-}
+.score-ring-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.score-ring-number { font-size: clamp(1.1rem, 4vw, 1.5rem); font-weight: 700; line-height: 1; white-space: nowrap; }
 .score-ring-label { font-size: clamp(0.55rem, 1.5vw, 0.65rem); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
 .summary-title { font-size: clamp(1rem, 3vw, 1.3rem); font-weight: 700; margin-bottom: 0.3rem; }
 .summary-subtitle { font-size: clamp(0.75rem, 2vw, 0.85rem); color: var(--text-muted); }
@@ -356,7 +240,15 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .review-ans-row { font-size: 0.78rem; color: var(--text-muted); }
 .review-ans-row .ca { color: var(--correct); }
 .review-ans-row .wa { color: var(--wrong); }
-.summary-actions { padding: 1.25rem 1.75rem; display: flex; gap: 0.75rem; border-top: 1px solid var(--border); flex-shrink: 0; position: sticky; bottom: 0; background: var(--bg2); z-index: 2; }
+.summary-actions {
+  padding: 1.25rem 1.75rem;
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  display: flex; gap: 0.75rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  position: sticky; bottom: 0;
+  background: var(--bg2); z-index: 2;
+}
 .action-btn { flex: 1; padding: 0.8rem; border-radius: var(--radius); font-family: 'Sora', sans-serif; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; }
 .action-btn.primary { background: var(--accent); color: white; box-shadow: 0 4px 16px var(--accent-glow); }
 .action-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px var(--accent-glow); }
@@ -364,7 +256,6 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .action-btn.secondary:hover { border-color: var(--accent); color: var(--accent); }
 .action-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; }
 
-/* ── MODALS ── */
 .modal-overlay { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.65); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 1.5rem; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
 .modal-box { background: var(--bg2); border: 1px solid var(--border-hover); border-radius: var(--radius-lg); padding: 2rem 1.75rem; max-width: 380px; width: 100%; text-align: center; transform: translateY(12px); transition: transform 0.25s ease; box-shadow: 0 24px 64px rgba(0,0,0,0.5); }
@@ -381,135 +272,70 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 .modal-btn.primary { background: var(--accent); color: white; box-shadow: 0 4px 16px var(--accent-glow); }
 .modal-btn.primary:hover { background: #8f7ef9; transform: translateY(-1px); }
 
-.passcode-input { width: 100%; background: var(--bg3); border: 1.5px solid var(--border-hover); border-radius: var(--radius); padding: 0.75rem 1rem; font-family: 'Sora', sans-serif; font-size: 1.1rem; font-weight: 600; color: var(--text); text-align: center; letter-spacing: 0.25em; outline: none; transition: border-color 0.2s; margin-bottom: 1rem; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text; }
+.passcode-input { width: 100%; background: var(--bg3); border: 1.5px solid var(--border-hover); border-radius: var(--radius); padding: 0.75rem 1rem; font-family: 'Sora', sans-serif; font-size: 1.1rem; font-weight: 600; color: var(--text); text-align: center; letter-spacing: 0.25em; outline: none; transition: border-color 0.2s; margin-bottom: 1rem; -webkit-user-select: text; -moz-user-select: text; user-select: text; }
 .passcode-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 .passcode-input.shake { animation: shake 0.4s ease; border-color: var(--wrong); box-shadow: 0 0 0 3px rgba(248,113,113,0.2); }
-@keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
+@keyframes shake { 0%,100%{transform:translateX(0);} 20%{transform:translateX(-8px);} 40%{transform:translateX(8px);} 60%{transform:translateX(-5px);} 80%{transform:translateX(5px);} }
 .passcode-err { font-size: 0.78rem; color: var(--wrong); margin-top: -0.6rem; margin-bottom: 0.8rem; min-height: 1rem; }
 
-/* ── TOAST ── */
-.toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(8px); background: var(--bg3); border: 1px solid var(--border-hover); color: var(--text); padding: 0.65rem 1.25rem; border-radius: 30px; font-size: 0.82rem; font-weight: 500; opacity: 0; transition: all 0.3s ease; pointer-events: none; z-index: 300; white-space: nowrap; }
+.toast { position: fixed; bottom: calc(2rem + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateY(8px); background: var(--bg3); border: 1px solid var(--border-hover); color: var(--text); padding: 0.65rem 1.25rem; border-radius: 30px; font-size: 0.82rem; font-weight: 500; opacity: 0; transition: all 0.3s ease; pointer-events: none; z-index: 300; white-space: nowrap; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 
-/* ── MOBILE ── */
 @media (max-width: 768px) {
-  body { height: auto; overflow: hidden; }
+  body { height: 100dvh; overflow: hidden; }
 
-  #page-landing {
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-  }
+  #page-landing { flex-direction: column; height: 100dvh; overflow: hidden; }
 
-  .logo-sidebar {
-    width: 100%;
-    height: 52px;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 0 1rem;
-    flex-shrink: 0;
-  }
-
-  .banks-col {
-    flex: 1;
-    overflow: hidden;
-    min-height: 0;
-  }
+  .logo-sidebar { width: 100%; height: 52px; border-right: none; border-bottom: 1px solid var(--border); flex-direction: row; align-items: center; justify-content: flex-start; padding: 0 1rem; flex-shrink: 0; }
+  .banks-col { flex: 1; overflow: hidden; min-height: 0; }
   .banks-body { padding: 0.75rem; }
-
-  .materials-header {
-    flex-wrap: nowrap;
-    gap: 0.4rem;
-    padding: 0.7rem 0.85rem;
-  }
+  .materials-header { flex-wrap: nowrap; gap: 0.4rem; padding: 0.7rem 0.85rem; }
   .materials-title { font-size: 0.68rem; }
   .search-input { min-width: 0; flex: 1; font-size: 0.72rem; }
+  .folder-tab { font-size: 0.68rem; padding: 0.35rem 0.65rem; }
 
   .settings-col {
-    width: 100%;
-    border-left: none;
-    border-top: 1px solid var(--border);
-    padding: 0.85rem 1rem;
-    flex-direction: column;
-    gap: 0.6rem;
-    flex-shrink: 0;
-    overflow: visible;
+    width: 100%; border-left: none; border-top: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    flex-direction: column; gap: 0.5rem; flex-shrink: 0; overflow: visible;
   }
-  .settings-list {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-  }
-  .setting-row {
-    border-bottom: none;
-    padding: 0.4rem 0.65rem;
-    background: var(--bg3);
-    border-radius: 8px;
-    gap: 0.5rem;
-    flex: 1;
-    min-width: 80px;
-  }
+  .settings-list { flex-direction: row; flex-wrap: wrap; gap: 0.4rem; }
+  .setting-row { border-bottom: none; padding: 0.4rem 0.65rem; background: var(--bg3); border-radius: 8px; gap: 0.5rem; flex: 1; min-width: 80px; }
   .setting-label { font-size: 0.75rem; }
   .settings-spacer { display: none; }
   .start-btn { padding: 0.75rem; font-size: 0.85rem; }
   .err-msg { text-align: left; }
 
-  #page-exam { height: 100vh; }
+  #page-exam { height: 100dvh; }
   .exam-header { padding: 0.75rem 1rem; gap: 0.85rem; }
-  .exam-body { padding: 1.25rem 1rem 5rem; }
+  .exam-body {
+    padding: 1.25rem 1rem;
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px) + 80px);
+  }
   .question-text { font-size: 1rem; }
   .choice-btn { padding: 0.85rem 1rem; font-size: 0.88rem; }
 
-  #page-summary {
-    height: 100vh;
-    padding: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-  }
-  .summary-card {
-    max-width: 100%;
-    border-radius: 0;
-    border: none;
-    height: 100vh;
-    max-height: 100vh;
-  }
-  /* FIX: on mobile allow hero to shrink, no overflow clip */
-  .summary-hero {
-    padding: 1rem 1rem 0.75rem;
-    overflow: visible;
-  }
-  .summary-score-ring {
-    width: min(80px, 22vw);
-    height: min(80px, 22vw);
-    margin-bottom: 0.6rem;
-  }
+  #page-summary { height: 100dvh; padding: 0; overflow: hidden; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; }
+  .summary-card { max-width: 100%; border-radius: 0; border: none; height: 100dvh; max-height: 100dvh; }
+  .summary-hero { padding: 1rem 1rem 0.75rem; overflow: visible; }
+  .summary-score-ring { width: min(80px, 22vw); height: min(80px, 22vw); margin-bottom: 0.6rem; }
   .summary-title { font-size: clamp(0.95rem, 4vw, 1.1rem); }
   .summary-subtitle { font-size: clamp(0.72rem, 2.5vw, 0.8rem); }
   .stat-cell { padding: 0.65rem 0.4rem; }
   .summary-review { padding: 0.85rem 1rem; }
   .summary-actions {
     padding: 0.75rem 1rem;
-    background: var(--bg2);
-    border-top: 1px solid var(--border);
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    background: var(--bg2); border-top: 1px solid var(--border);
   }
 
-  .format-popover {
-    top: auto;
-    bottom: calc(100% + 8px);
-    right: auto;
-    left: 0;
-    width: 280px;
-  }
+  .format-popover { top: auto; bottom: calc(100% + 8px); right: auto; left: 0; width: 280px; }
+  .modal-box { padding: 1.5rem 1.25rem; }
 }
 
 @media (max-width: 400px) {
@@ -521,7 +347,6 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
 </head>
 <body>
 
-<!-- SPLASH -->
 <div id="page-splash">
   <div class="splash-logo">
     <svg width="100" height="100" viewBox="0 0 56 56" fill="none">
@@ -535,12 +360,9 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   </div>
 </div>
 
-<!-- DRAG OVERLAY -->
 <div class="drag-overlay" id="drag-overlay">
   <div class="drag-overlay-rings">
-    <div class="drag-ring"></div>
-    <div class="drag-ring"></div>
-    <div class="drag-ring"></div>
+    <div class="drag-ring"></div><div class="drag-ring"></div><div class="drag-ring"></div>
     <div class="drag-center">
       <div class="drag-icon-wrap">📂</div>
       <div class="drag-title">Drop to upload</div>
@@ -549,7 +371,6 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   </div>
 </div>
 
-<!-- LANDING -->
 <div id="page-landing" class="page hidden">
   <div class="logo-sidebar">
     <svg width="40" height="40" viewBox="0 0 56 56" fill="none">
@@ -572,7 +393,7 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
         <div class="materials-header">
           <span class="materials-title">Question Banks</span>
           <span class="bank-count-badge" id="bank-count-badge">0</span>
-          <input class="search-input" id="search-input" type="text" placeholder="Search banks…">
+          <input class="search-input" id="search-input" type="text" placeholder="Search all banks…">
           <div class="header-btns">
             <button class="icon-btn" id="refresh-btn" title="Refresh">
               <svg id="refresh-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -604,11 +425,14 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
           </div>
           <input type="file" id="file-input" accept=".xlsx,.xls,.csv" multiple>
         </div>
-        <div id="materials-empty" class="materials-empty">
-          <div class="materials-empty-icon">📚</div>
-          No question banks yet.<br>Upload or drop a file to get started.
+        <div class="folder-tabs-bar" id="folder-tabs-bar"></div>
+        <div class="bank-pane" id="bank-pane">
+          <div class="bank-pane-empty" id="pane-initial">
+            <div class="bank-pane-empty-icon">📁</div>
+            Select a folder to view its banks.
+            <span style="font-size:0.72rem;">Banks load on demand when a folder is opened.</span>
+          </div>
         </div>
-        <div id="bank-list" class="bank-list hidden"></div>
       </div>
     </div>
   </div>
@@ -635,7 +459,6 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   </div>
 </div>
 
-<!-- EXAM -->
 <div id="page-exam" class="page hidden">
   <header class="exam-header">
     <button class="home-btn" id="quit-btn" title="Quit quiz">
@@ -653,12 +476,9 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
       <span class="score-chip w" id="hdr-w">0 ✗</span>
     </div>
   </header>
-  <div class="exam-body">
-    <div class="question-card" id="question-card"></div>
-  </div>
+  <div class="exam-body"><div class="question-card" id="question-card"></div></div>
 </div>
 
-<!-- SUMMARY -->
 <div id="page-summary" class="page hidden">
   <div class="summary-card">
     <div class="summary-hero">
@@ -691,7 +511,6 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   </div>
 </div>
 
-<!-- QUIT MODAL -->
 <div class="modal-overlay" id="quit-modal">
   <div class="modal-box">
     <div class="modal-icon">🚪</div>
@@ -704,7 +523,6 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   </div>
 </div>
 
-<!-- DELETE MODAL -->
 <div class="modal-overlay" id="delete-modal">
   <div class="modal-box">
     <div class="modal-icon">🗑️</div>
@@ -717,14 +535,13 @@ body::before { content: ''; position: fixed; inset: 0; background: radial-gradie
   </div>
 </div>
 
-<!-- SHARED BANK START MODAL -->
 <div class="modal-overlay" id="shared-start-modal">
   <div class="modal-box" id="shared-modal-box">
     <div class="shared-modal-icon-wrap">
       <svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
     </div>
-    <div class="modal-title" id="shared-modal-title" style="position:relative;z-index:1;">Ready to start?</div>
-    <div class="modal-desc" id="shared-modal-desc" style="margin-bottom:1.25rem;position:relative;z-index:1;">Your quiz is loading from Drive…</div>
+    <div class="modal-title" id="shared-modal-title">Ready to start?</div>
+    <div class="modal-desc" id="shared-modal-desc" style="margin-bottom:1.25rem;">Your quiz is loading from Drive…</div>
     <div class="shared-bank-card shared-loading" id="shared-bank-info">
       <div class="shared-bank-card-icon">
         <svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
@@ -776,60 +593,51 @@ const GAS_READY = GAS_URL && GAS_URL !== 'PASTE_YOUR_GAS_WEB_APP_URL_HERE';
 const AUTO_ADVANCE_CORRECT_SECS = 1;
 const AUTO_ADVANCE_WRONG_SECS = 2;
 
-let banks = [], selectedIds = new Set();
+let folders = [];
+let allBanks = [];
+let selectedIds = new Set();
+let activeTabId = null;
 let sessionQuestions = [], wrongPool = [], sessionResults = [];
 let currentIdx = 0, correctCount = 0, wrongCount = 0;
 let autoTimer = null, pendingDeleteId = null;
 let totalUniqueQuestions = 0, searchQuery = '';
-// shared link mode: only show retry, no back-to-banks
-let isSharedMode = false;
-let sharedBankData = null; // { id, name, questions }
+let isSharedMode = false, sharedBankData = null;
 
 const $ = id => document.getElementById(id);
 
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
-  if (e.ctrlKey && (k === 'c' || k === 'u' || k === 'p' || k === 's')) e.preventDefault();
+  if (e.ctrlKey && (k==='c'||k==='u'||k==='p'||k==='s')) e.preventDefault();
 });
 window.addEventListener('beforeprint', e => e.preventDefault());
 
 function updateUploadBtn() {
   const isMobile = window.innerWidth <= 768;
   const desktop = document.querySelector('.desktop-label');
-  const mobile = document.querySelector('.mobile-label');
+  const mobile  = document.querySelector('.mobile-label');
   if (desktop && mobile) {
     desktop.style.display = isMobile ? 'none' : '';
-    mobile.style.display = isMobile ? '' : 'none';
+    mobile.style.display  = isMobile ? '' : 'none';
   }
-  if (isMobile) {
-    $('add-bank-btn').style.padding = '0.35rem 0.6rem';
-    $('add-bank-btn').style.fontSize = '1rem';
-    $('add-bank-btn').style.fontWeight = '700';
-  } else {
-    $('add-bank-btn').style.padding = '';
-    $('add-bank-btn').style.fontSize = '';
-    $('add-bank-btn').style.fontWeight = '';
-  }
+  const btn = $('add-bank-btn');
+  if (isMobile) { btn.style.padding='0.35rem 0.6rem'; btn.style.fontSize='1rem'; btn.style.fontWeight='700'; }
+  else { btn.style.padding=''; btn.style.fontSize=''; btn.style.fontWeight=''; }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
   updateUploadBtn();
   window.addEventListener('resize', updateUploadBtn);
 
-  // ── Check for shared bank in URL ──
-  const urlParams = new URLSearchParams(window.location.search);
+  const urlParams    = new URLSearchParams(window.location.search);
   const sharedBankId = urlParams.get('bank');
 
   setTimeout(() => {
     $('page-splash').classList.add('fade-out');
     setTimeout(() => {
       $('page-splash').classList.add('hidden');
-
       if (sharedBankId && GAS_READY) {
-        // Shared link mode: skip landing, show start modal
         isSharedMode = true;
-        $('page-landing').classList.add('hidden');
         loadSharedBank(sharedBankId);
       } else {
         showPasscodeGate();
@@ -837,59 +645,54 @@ window.addEventListener('DOMContentLoaded', () => {
     }, 600);
   }, 1800);
 
-  if (GAS_READY) { $('config-banner').classList.add('hidden'); if (!sharedBankId) loadBanksFromGAS(); }
-  else { $('add-bank-btn').disabled = true; }
+  if (GAS_READY && !new URLSearchParams(window.location.search).get('bank')) {
+    $('config-banner').classList.add('hidden');
+  } else if (!GAS_READY) {
+    $('add-bank-btn').disabled = true;
+  }
 
-  $('refresh-btn').addEventListener('click', () => loadBanksFromGAS());
+  $('refresh-btn').addEventListener('click', () => loadFolders());
   $('add-bank-btn').addEventListener('click', () => $('file-input').click());
-  $('file-input').addEventListener('change', e => { handleFiles(e.target.files); e.target.value = ''; });
+  $('file-input').addEventListener('change', e => { handleFiles(e.target.files); e.target.value=''; });
   $('start-btn').addEventListener('click', () => startQuiz());
   $('quit-btn').addEventListener('click', () => openQuitModal());
   $('quit-keep').addEventListener('click', () => closeQuitModal());
   $('quit-confirm').addEventListener('click', () => confirmQuit());
-  $('quit-modal').addEventListener('click', e => { if (e.target === $('quit-modal')) closeQuitModal(); });
+  $('quit-modal').addEventListener('click', e => { if (e.target===$('quit-modal')) closeQuitModal(); });
   $('delete-cancel').addEventListener('click', () => closeDeleteModal());
-  $('delete-modal').addEventListener('click', e => { if (e.target === $('delete-modal')) closeDeleteModal(); });
+  $('delete-modal').addEventListener('click', e => { if (e.target===$('delete-modal')) closeDeleteModal(); });
   $('btn-landing').addEventListener('click', () => goLanding());
   $('btn-retake').addEventListener('click', () => retakeSession());
   $('shared-start-btn').addEventListener('click', () => startSharedSession());
-  $('passcode-submit').addEventListener('click', () => submitPasscode());
-  $('passcode-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitPasscode(); });
-
   $('shared-retry-btn').addEventListener('click', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get('bank');
-    if (id) { $('shared-retry-btn').style.display = 'none'; loadSharedBank(id); }
+    const id = new URLSearchParams(window.location.search).get('bank');
+    if (id) { $('shared-retry-btn').style.display='none'; loadSharedBank(id); }
   });
-
+  $('passcode-submit').addEventListener('click', () => submitPasscode());
+  $('passcode-input').addEventListener('keydown', e => { if (e.key==='Enter') submitPasscode(); });
   $('search-input').addEventListener('input', e => {
     searchQuery = e.target.value.toLowerCase().trim();
-    renderBanks();
+    handleSearch();
   });
-
-  $('format-btn').addEventListener('click', e => {
-    e.stopPropagation();
-    $('format-popover').classList.toggle('open');
-  });
+  $('format-btn').addEventListener('click', e => { e.stopPropagation(); $('format-popover').classList.toggle('open'); });
   document.addEventListener('click', () => $('format-popover').classList.remove('open'));
-
   $('delete-modal-confirm').addEventListener('click', async () => {
     const id = pendingDeleteId; if (!id) return;
     closeDeleteModal();
     try {
-      const data = await gasPost({ action: 'delete' }, { fileId: id });
-      if (data.error) { showErr('Delete failed: ' + data.error); return; }
-      banks = banks.filter(b => b.id !== id);
+      const data = await gasPost({ action:'delete' }, { fileId:id });
+      if (data.error) { showErr('Delete failed: '+data.error); return; }
+      allBanks = allBanks.filter(b => b.id !== id);
+      folders.forEach(f => { f.banks = f.banks.filter(b => b.id !== id); });
       selectedIds.delete(id);
-      renderBanks();
+      renderCurrentTab();
+      updateStartBtn();
       showToast('Bank deleted from Drive.');
-    } catch (err) { showErr('Delete error: ' + err.message); }
+    } catch (err) { showErr('Delete error: '+err.message); }
   });
-
   setupDragOverlay();
 });
 
-// Admin Access
 function showPasscodeGate() {
   $('passcode-modal').classList.add('open');
   $('passcode-err').textContent = '';
@@ -903,19 +706,14 @@ async function submitPasscode() {
   $('passcode-submit').textContent = 'Checking…';
   $('passcode-submit').disabled = true;
   try {
-    const data = await gasGet({ action: 'verify', code: val });
+    const data = await gasGet({ action:'verify', code:val });
     if (data.ok) {
       $('passcode-modal').classList.remove('open');
       $('page-landing').classList.remove('hidden');
-      if (GAS_READY) {
-        $('config-banner').classList.add('hidden');
-        loadBanksFromGAS();
-      }
+      if (GAS_READY) { $('config-banner').classList.add('hidden'); loadFolders(); }
     } else {
       const inp = $('passcode-input');
-      inp.classList.remove('shake');
-      void inp.offsetWidth;
-      inp.classList.add('shake');
+      inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake');
       $('passcode-err').textContent = 'Incorrect passcode. Try again.';
       inp.value = '';
       setTimeout(() => inp.classList.remove('shake'), 400);
@@ -928,7 +726,124 @@ async function submitPasscode() {
   }
 }
 
-// ── SHARED BANK LOADING ──
+async function loadFolders() {
+  if (!GAS_READY) return;
+  const btn = $('refresh-btn'); btn.classList.add('spinning');
+  try {
+    const data = await gasGet({ action:'list' });
+    if (data.error) { showErr('Could not load banks: '+data.error); return; }
+    const existingQ = {};
+    allBanks.forEach(b => { if (b.questions) existingQ[b.id] = b.questions; });
+    folders = (data.folders || []).map(f => ({
+      ...f,
+      banks: f.banks.map(b => ({ ...b, questions: existingQ[b.id] || null }))
+    }));
+    allBanks = folders.flatMap(f => f.banks);
+    $('bank-count-badge').textContent = allBanks.length;
+    renderTabs();
+    if (activeTabId && folders.find(f => f.id === activeTabId)) {
+      renderBankList(activeTabId);
+    } else {
+      activeTabId = null;
+      showInitialPane();
+    }
+  } catch (e) { showErr('Network error — check your GAS URL.'); }
+  finally { btn.classList.remove('spinning'); }
+}
+
+function renderTabs() {
+  const bar = $('folder-tabs-bar'); bar.innerHTML = '';
+  folders.forEach(folder => {
+    const tab = document.createElement('div');
+    tab.className = 'folder-tab' + (folder.id === activeTabId ? ' active' : '');
+    tab.textContent = (folder.id === '_ungrouped' ? '📂 ' : '📁 ') + folder.name;
+    tab.dataset.id = folder.id;
+    tab.addEventListener('click', () => selectTab(folder.id));
+    bar.appendChild(tab);
+  });
+}
+
+function selectTab(folderId) {
+  if (searchQuery) { $('search-input').value=''; searchQuery=''; }
+  activeTabId = folderId;
+  renderTabs();
+  renderBankList(folderId);
+}
+
+function renderBankList(folderId) {
+  const folder = folders.find(f => f.id === folderId);
+  if (!folder) return;
+  const pane = $('bank-pane'); pane.innerHTML = '';
+  if (!folder.banks.length) {
+    pane.innerHTML = '<div class="bank-pane-empty"><div class="bank-pane-empty-icon">📭</div>No banks in this folder.</div>';
+    return;
+  }
+  const list = document.createElement('div'); list.className = 'bank-list';
+  folder.banks.forEach(bank => appendBankItem(list, bank));
+  pane.appendChild(list);
+}
+
+function appendBankItem(container, bank) {
+  const isSel = selectedIds.has(bank.id);
+  const item  = document.createElement('div');
+  item.className = 'bank-item' + (isSel ? ' selected' : '');
+  item.dataset.id = bank.id;
+  const qLabel = bank.questions ? bank.questions.length + ' questions' : 'tap to load';
+  item.innerHTML = `
+    <div class="bank-checkbox">${isSel ? '✓' : ''}</div>
+    <div class="bank-icon">📋</div>
+    <div class="bank-info">
+      <div class="bank-name">${escHtml(bank.name)}</div>
+      <div class="bank-meta">${qLabel} · Added ${bank.addedAt}</div>
+    </div>
+    <div class="bank-actions">
+      <button class="bank-share" title="Copy share link">🔗</button>
+      <button class="bank-delete" title="Delete from Drive">✕</button>
+    </div>`;
+  item.addEventListener('click', () => toggleBank(bank.id));
+  item.querySelector('.bank-share').addEventListener('click', e => { e.stopPropagation(); copyShareLink(bank.id, bank.name); });
+  item.querySelector('.bank-delete').addEventListener('click', e => { e.stopPropagation(); openDeleteModal(bank.id, bank.name); });
+  container.appendChild(item);
+}
+
+function renderCurrentTab() {
+  if (searchQuery) { handleSearch(); return; }
+  if (activeTabId) renderBankList(activeTabId); else showInitialPane();
+}
+
+function showInitialPane() {
+  const pane = $('bank-pane'); pane.innerHTML = '';
+  const el = document.createElement('div'); el.className = 'bank-pane-empty';
+  el.innerHTML = '<div class="bank-pane-empty-icon">📁</div>Select a folder to view its banks.<span style="font-size:0.72rem;">Banks load on demand when a folder is opened.</span>';
+  pane.appendChild(el);
+}
+
+function handleSearch() {
+  const pane = $('bank-pane');
+  if (!searchQuery) { if (activeTabId) renderBankList(activeTabId); else showInitialPane(); return; }
+  const results = allBanks.filter(b => b.name.toLowerCase().includes(searchQuery));
+  pane.innerHTML = '';
+  document.querySelectorAll('.folder-tab').forEach(t => t.classList.remove('active'));
+  if (!results.length) {
+    pane.innerHTML = '<div class="bank-pane-empty"><div class="bank-pane-empty-icon">🔍</div>No banks match your search.</div>';
+    updateStartBtn(); return;
+  }
+  const list = document.createElement('div'); list.className = 'bank-list';
+  results.forEach(bank => appendBankItem(list, bank));
+  pane.appendChild(list);
+  updateStartBtn();
+}
+
+function toggleBank(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+  renderCurrentTab();
+  updateStartBtn();
+}
+
+function updateStartBtn() {
+  $('start-btn').disabled = !(selectedIds.size > 0 && allBanks.some(b => selectedIds.has(b.id)));
+}
+
 async function loadSharedBank(fileId) {
   $('shared-bank-name').textContent = 'Loading…';
   $('shared-bank-meta').textContent = 'Fetching questions from Drive…';
@@ -937,20 +852,17 @@ async function loadSharedBank(fileId) {
   $('shared-start-modal').classList.add('open');
   $('shared-start-btn').disabled = true;
   $('shared-retry-btn').style.display = 'none';
-
   try {
-    const listData = await gasGet({ action: 'list' });
+    const listData = await gasGet({ action:'list' });
     let bankName = 'Quiz Bank';
     if (!listData.error && listData.banks) {
       const found = listData.banks.find(b => b.id === fileId);
       if (found) bankName = found.name;
     }
-
-    const data = await gasGet({ action: 'get', fileId });
+    const data = await gasGet({ action:'get', fileId });
     if (data.error) throw new Error(data.error);
     const bytes = Uint8Array.from(atob(data.data), c => c.charCodeAt(0));
     const questions = parseWorkbook(bytes.buffer);
-
     sharedBankData = { id: fileId, name: bankName, questions };
     $('shared-bank-name').textContent = bankName;
     $('shared-bank-meta').textContent = `${questions.length} questions ready`;
@@ -971,127 +883,62 @@ async function loadSharedBank(fileId) {
 function startSharedSession() {
   if (!sharedBankData) return;
   $('shared-start-modal').classList.remove('open');
-
-  // Override main toggles with shared modal settings
-  $('toggle-mastery').checked  = $('shared-toggle-mastery').checked;
-  $('toggle-shuffle').checked  = $('shared-toggle-shuffle').checked;
-  $('toggle-auto').checked     = $('shared-toggle-auto').checked;
-
-  // Lock selected banks to the shared one
-  banks = [{ ...sharedBankData }];
-  selectedIds = new Set([sharedBankData.id]);
-
+  $('toggle-mastery').checked = $('shared-toggle-mastery').checked;
+  $('toggle-shuffle').checked = $('shared-toggle-shuffle').checked;
+  $('toggle-auto').checked    = $('shared-toggle-auto').checked;
   const source = sharedBankData.questions.map(q => ({ ...q, _bank: sharedBankData.name }));
   _beginSession(source);
 }
 
 function setupDragOverlay() {
-  let dragCounter = 0;
-  const overlay = $('drag-overlay');
-  document.addEventListener('dragenter', e => {
-    if (!GAS_READY) return;
-    e.preventDefault(); dragCounter++;
-    overlay.classList.add('active');
-  });
-  document.addEventListener('dragleave', () => {
-    dragCounter--;
-    if (dragCounter <= 0) { dragCounter = 0; overlay.classList.remove('active'); }
-  });
+  let dc = 0; const overlay = $('drag-overlay');
+  document.addEventListener('dragenter', e => { if (!GAS_READY) return; e.preventDefault(); dc++; overlay.classList.add('active'); });
+  document.addEventListener('dragleave', () => { dc--; if (dc<=0) { dc=0; overlay.classList.remove('active'); } });
   document.addEventListener('dragover', e => e.preventDefault());
-  document.addEventListener('drop', e => {
-    e.preventDefault(); dragCounter = 0;
-    overlay.classList.remove('active');
-    if (!GAS_READY) return;
-    handleFiles(e.dataTransfer.files);
-  });
+  document.addEventListener('drop', e => { e.preventDefault(); dc=0; overlay.classList.remove('active'); if (!GAS_READY) return; handleFiles(e.dataTransfer.files); });
 }
 
-function showPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-  $(id).classList.remove('hidden');
-}
+function showPage(id) { document.querySelectorAll('.page').forEach(p => p.classList.add('hidden')); $(id).classList.remove('hidden'); }
 
 let toastTimer;
-function showToast(msg, duration = 2800) {
-  const t = $('toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), duration);
-}
-function showErr(msg) {
-  const el = $('err-msg'); el.textContent = msg; el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', 4500);
-}
+function showToast(msg, duration=2800) { const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),duration); }
+function showErr(msg) { const el=$('err-msg'); el.textContent=msg; el.style.display='block'; setTimeout(()=>el.style.display='none',4500); }
 
-async function gasGet(params) {
-  const url = new URL(GAS_URL);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  return (await fetch(url.toString())).json();
-}
-async function gasPost(params, body) {
-  const url = new URL(GAS_URL);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  return (await fetch(url.toString(), { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(body) })).json();
-}
-
-async function loadBanksFromGAS() {
-  if (!GAS_READY) return;
-  const btn = $('refresh-btn'); btn.classList.add('spinning');
-  try {
-    const data = await gasGet({ action: 'list' });
-    if (data.error) { showErr('Could not load banks: ' + data.error); return; }
-    const existing = {};
-    banks.forEach(b => { if (b.questions) existing[b.id] = b.questions; });
-    banks = data.banks.map(b => ({ ...b, questions: existing[b.id] || null }));
-    selectedIds = new Set();
-    renderBanks();
-  } catch (e) { showErr('Network error — check your GAS URL.'); }
-  finally { btn.classList.remove('spinning'); }
-}
+async function gasGet(params) { const url=new URL(GAS_URL); Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v)); return (await fetch(url.toString())).json(); }
+async function gasPost(params,body) { const url=new URL(GAS_URL); Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v)); return (await fetch(url.toString(),{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(body)})).json(); }
 
 async function fetchBankQuestions(bank) {
-  const data = await gasGet({ action: 'get', fileId: bank.id });
+  const data = await gasGet({ action:'get', fileId:bank.id });
   if (data.error) throw new Error(data.error);
   const bytes = Uint8Array.from(atob(data.data), c => c.charCodeAt(0));
   return parseWorkbook(bytes.buffer);
 }
 
 function parseWorkbook(ab) {
-  const wb = XLSX.read(ab, { type: 'array' });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  // FIX: Use raw:false to preserve line breaks in cells, then handle them manually
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
-  if (rows.length < 2) throw new Error('No data found.');
-  const firstRow = rows[0].map(h => String(h).toLowerCase().trim());
-  let qI=0, aI=1, bI=2, cI=3, dI=4, eI=5, ansI=6, expI=7;
-  qI   = firstRow.findIndex(h => h === 'question' || h.startsWith('q'));
-  aI   = firstRow.findIndex(h => h === 'a');
-  bI   = firstRow.findIndex(h => h === 'b');
-  cI   = firstRow.findIndex(h => h === 'c');
-  dI   = firstRow.findIndex(h => h === 'd');
-  eI   = firstRow.findIndex(h => h === 'e');
-  ansI = firstRow.findIndex(h => h === 'answer' || h === 'ans' || h === 'correct');
-  expI = firstRow.findIndex(h => h === 'explanation' || h === 'exp' || h === 'reason');
-  if (qI<0) qI=0; if (aI<0) aI=1; if (bI<0) bI=2;
-  if (cI<0) cI=3; if (dI<0) dI=4; if (eI<0) eI=5; if (ansI<0) ansI=6; if (expI<0) expI=7;
-  const parsed = [];
-  for (let i = 1; i < rows.length; i++) {
-    const r = rows[i];
-    const q   = String(r[qI]   || '').trim();
-    const ca  = String(r[aI]   || '').trim();
-    const cb  = String(r[bI]   || '').trim();
-    const cc  = String(r[cI]   || '').trim();
-    const cd  = String(r[dI]   || '').trim();
-    const ce  = String(r[eI]   || '').trim();
-    const ans = String(r[ansI] || '').trim().toUpperCase().charAt(0);
-    // FIX: preserve line breaks from Excel — \n, \r\n, and soft-return \r all normalized
-    const exp = String(r[expI] || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
-    if (!q || !ca || !ans) continue;
-    const choices = [{ letter: 'A', text: ca }];
-    if (cb) choices.push({ letter: 'B', text: cb });
-    if (cc) choices.push({ letter: 'C', text: cc });
-    if (cd) choices.push({ letter: 'D', text: cd });
-    if (ce) choices.push({ letter: 'E', text: ce });
-    parsed.push({ question: q, choices, answer: ans, type: choices.length === 2 ? 'True / False' : 'MCQ', explanation: exp });
+  const wb=XLSX.read(ab,{type:'array'}); const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+  if (rows.length<2) throw new Error('No data found.');
+  const firstRow=rows[0].map(h=>String(h).toLowerCase().trim());
+  let qI=0,aI=1,bI=2,cI=3,dI=4,eI=5,ansI=6,expI=7;
+  qI=firstRow.findIndex(h=>h==='question'||h.startsWith('q'));
+  aI=firstRow.findIndex(h=>h==='a'); bI=firstRow.findIndex(h=>h==='b');
+  cI=firstRow.findIndex(h=>h==='c'); dI=firstRow.findIndex(h=>h==='d');
+  eI=firstRow.findIndex(h=>h==='e');
+  ansI=firstRow.findIndex(h=>h==='answer'||h==='ans'||h==='correct');
+  expI=firstRow.findIndex(h=>h==='explanation'||h==='exp'||h==='reason');
+  if(qI<0)qI=0;if(aI<0)aI=1;if(bI<0)bI=2;if(cI<0)cI=3;if(dI<0)dI=4;if(eI<0)eI=5;if(ansI<0)ansI=6;if(expI<0)expI=7;
+  const parsed=[];
+  for (let i=1;i<rows.length;i++) {
+    const r=rows[i];
+    const q=String(r[qI]||'').trim(), ca=String(r[aI]||'').trim(), cb=String(r[bI]||'').trim();
+    const cc=String(r[cI]||'').trim(), cd=String(r[dI]||'').trim(), ce=String(r[eI]||'').trim();
+    const ans=String(r[ansI]||'').trim().toUpperCase().charAt(0);
+    const exp=String(r[expI]||'').replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim();
+    if (!q||!ca||!ans) continue;
+    const choices=[{letter:'A',text:ca}];
+    if(cb)choices.push({letter:'B',text:cb}); if(cc)choices.push({letter:'C',text:cc});
+    if(cd)choices.push({letter:'D',text:cd}); if(ce)choices.push({letter:'E',text:ce});
+    parsed.push({question:q,choices,answer:ans,type:choices.length===2?'True / False':'MCQ',explanation:exp});
   }
   if (!parsed.length) throw new Error('No valid questions found. Check column format.');
   return parsed;
@@ -1099,323 +946,188 @@ function parseWorkbook(ab) {
 
 function handleFiles(fileList) {
   if (!GAS_READY) { showErr('Set GAS_URL first.'); return; }
-  const files = Array.from(fileList).filter(f => /\.(xlsx|xls|csv)$/i.test(f.name));
+  const files=Array.from(fileList).filter(f=>/\.(xlsx|xls|csv)$/i.test(f.name));
   if (!files.length) { showErr('Please upload .xlsx, .xls, or .csv files.'); return; }
   files.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = async e => {
+    const reader=new FileReader();
+    reader.onload=async e => {
       try {
-        showToast(`⏳ Uploading "${file.name}"…`, 15000);
-        const b64 = btoa(String.fromCharCode(...new Uint8Array(e.target.result)));
-        const mimeType = file.name.endsWith('.csv') ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-        const data = await gasPost({ action: 'upload' }, { fileName: file.name, data: b64, mimeType });
-        if (data.error) { showErr('Upload failed: ' + data.error); return; }
+        showToast(`⏳ Uploading "${file.name}"…`,15000);
+        const b64=btoa(String.fromCharCode(...new Uint8Array(e.target.result)));
+        const mimeType=file.name.endsWith('.csv')?'text/csv':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        const data=await gasPost({action:'upload'},{fileName:file.name,data:b64,mimeType});
+        if (data.error) { showErr('Upload failed: '+data.error); return; }
         showToast(`✓ "${file.name}" saved to Drive`);
-        await loadBanksFromGAS();
-      } catch (err) { showErr('Upload error: ' + err.message); }
+        await loadFolders();
+      } catch (err) { showErr('Upload error: '+err.message); }
     };
     reader.readAsArrayBuffer(file);
   });
 }
 
-function getShareUrl(bankId) {
-  const url = new URL(window.location.href);
-  url.search = '';
-  url.searchParams.set('bank', bankId);
-  return url.toString();
-}
-
+function getShareUrl(bankId) { const url=new URL(window.location.href); url.search=''; url.searchParams.set('bank',bankId); return url.toString(); }
 function copyShareLink(bankId, bankName) {
-  const link = getShareUrl(bankId);
-  navigator.clipboard.writeText(link).then(() => {
-    showToast(`🔗 Link for "${bankName}" copied!`);
-  }).catch(() => {
-    // Fallback for older browsers
-    const ta = document.createElement('textarea');
-    ta.value = link;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
+  const link=getShareUrl(bankId);
+  navigator.clipboard.writeText(link).then(()=>showToast(`🔗 Link for "${bankName}" copied!`)).catch(()=>{
+    const ta=document.createElement('textarea'); ta.value=link; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
     showToast(`🔗 Link for "${bankName}" copied!`);
   });
 }
 
-function renderBanks() {
-  const list = $('bank-list'), empty = $('materials-empty');
-  $('bank-count-badge').textContent = banks.length;
-  const filtered = searchQuery ? banks.filter(b => b.name.toLowerCase().includes(searchQuery)) : banks;
-  if (!banks.length) {
-    empty.classList.remove('hidden'); list.classList.add('hidden');
-    $('start-btn').disabled = true; return;
-  }
-  empty.classList.add('hidden'); list.classList.remove('hidden'); list.innerHTML = '';
-  if (!filtered.length) {
-    list.innerHTML = '<div style="text-align:center;color:var(--text-dim);font-size:0.82rem;padding:2rem;">No banks match your search.</div>';
-    updateStartBtn(); return;
-  }
-  filtered.forEach(bank => {
-    const isSel = selectedIds.has(bank.id);
-    const item = document.createElement('div');
-    item.className = 'bank-item' + (isSel ? ' selected' : '');
-    item.innerHTML = `
-      <div class="bank-checkbox">${isSel ? '✓' : ''}</div>
-      <div class="bank-icon">📋</div>
-      <div class="bank-info">
-        <div class="bank-name">${escHtml(bank.name)}</div>
-        <div class="bank-meta">${bank.questions ? bank.questions.length + ' questions' : 'tap to load'} · Added ${bank.addedAt}</div>
-      </div>
-      <div class="bank-actions">
-        <button class="bank-share" title="Copy share link">🔗</button>
-        <button class="bank-delete" title="Delete from Drive">✕</button>
-      </div>`;
-    item.addEventListener('click', () => toggleBank(bank.id));
-    item.querySelector('.bank-share').addEventListener('click', e => {
-      e.stopPropagation();
-      copyShareLink(bank.id, bank.name);
-    });
-    item.querySelector('.bank-delete').addEventListener('click', e => {
-      e.stopPropagation(); openDeleteModal(bank.id, bank.name);
-    });
-    list.appendChild(item);
-  });
-  updateStartBtn();
-}
-
-function toggleBank(id) {
-  if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
-  renderBanks();
-}
-function openDeleteModal(id, name) { pendingDeleteId = id; $('delete-modal-name').textContent = name; $('delete-modal').classList.add('open'); }
-function closeDeleteModal() { $('delete-modal').classList.remove('open'); pendingDeleteId = null; }
-function updateStartBtn() { $('start-btn').disabled = !(selectedIds.size > 0 && banks.some(b => selectedIds.has(b.id))); }
+function openDeleteModal(id,name) { pendingDeleteId=id; $('delete-modal-name').textContent=name; $('delete-modal').classList.add('open'); }
+function closeDeleteModal() { $('delete-modal').classList.remove('open'); pendingDeleteId=null; }
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 function shuffleChoices(q) {
-  const correctText = q.choices.find(c => c.letter === q.answer)?.text;
-  const shuffled = [...q.choices].sort(() => Math.random() - 0.5).map((c, i) => ({ ...c, letter: String.fromCharCode(65 + i) }));
-  const newAnswer = shuffled.find(c => c.text === correctText)?.letter || q.answer;
-  return { ...q, choices: shuffled, answer: newAnswer };
+  const correctText=q.choices.find(c=>c.letter===q.answer)?.text;
+  const shuffled=[...q.choices].sort(()=>Math.random()-0.5).map((c,i)=>({...c,letter:String.fromCharCode(65+i)}));
+  const newAnswer=shuffled.find(c=>c.text===correctText)?.letter||q.answer;
+  return {...q,choices:shuffled,answer:newAnswer};
 }
 
 async function startQuiz() {
-  const selectedBanks = banks.filter(b => selectedIds.has(b.id));
+  const selectedBanks=allBanks.filter(b=>selectedIds.has(b.id));
   if (!selectedBanks.length) { showErr('Select at least one bank.'); return; }
-  $('start-btn').textContent = 'Loading…'; $('start-btn').disabled = true;
+  $('start-btn').textContent='Loading…'; $('start-btn').disabled=true;
   try {
     for (const bank of selectedBanks) {
       if (!bank.questions) {
-        showToast(`⏳ Loading "${bank.name}"…`, 60000);
-        bank.questions = await fetchBankQuestions(bank);
-        showToast(`✓ "${bank.name}" loaded!`, 1500);
-        renderBanks();
+        showToast(`⏳ Loading "${bank.name}"…`,60000);
+        bank.questions=await fetchBankQuestions(bank);
+        const mc=document.querySelector(`.bank-item[data-id="${bank.id}"] .bank-meta`);
+        if (mc) mc.textContent=bank.questions.length+' questions · Added '+bank.addedAt;
+        showToast(`✓ "${bank.name}" loaded!`,1500);
       }
     }
   } catch (err) {
-    showErr('Could not load bank: ' + err.message);
-    $('start-btn').textContent = 'Start Session →'; $('start-btn').disabled = false; return;
+    showErr('Could not load bank: '+err.message);
+    $('start-btn').textContent='Start Session →'; $('start-btn').disabled=false; return;
   }
-  $('start-btn').textContent = 'Start Session →'; $('start-btn').disabled = false;
-  const source = selectedBanks.flatMap(b => b.questions.map(q => ({ ...q, _bank: b.name })));
+  $('start-btn').textContent='Start Session →'; $('start-btn').disabled=false;
+  const source=selectedBanks.flatMap(b=>b.questions.map(q=>({...q,_bank:b.name})));
   _beginSession(source);
 }
 
 function _beginSession(source) {
-  const doShuffle = $('toggle-shuffle').checked;
-  let questions = doShuffle ? [...source].sort(() => Math.random() - 0.5) : [...source];
-  questions = questions.map(q => shuffleChoices(q));
-  totalUniqueQuestions = questions.length;
-  sessionQuestions = questions;
-  currentIdx = 0; correctCount = 0; wrongCount = 0;
-  sessionResults = []; wrongPool = [];
-  showPage('page-exam');
-  renderQuestion();
+  const doShuffle=$('toggle-shuffle').checked;
+  let questions=doShuffle?[...source].sort(()=>Math.random()-0.5):[...source];
+  questions=questions.map(q=>shuffleChoices(q));
+  totalUniqueQuestions=questions.length;
+  sessionQuestions=questions; currentIdx=0; correctCount=0; wrongCount=0;
+  sessionResults=[]; wrongPool=[];
+  showPage('page-exam'); renderQuestion();
 }
 
 function renderQuestion() {
-  const q = sessionQuestions[currentIdx];
-  const masteryOn = $('toggle-mastery').checked;
-
-  const displayTotal = masteryOn ? totalUniqueQuestions : sessionQuestions.length;
-  const displayCur   = masteryOn ? correctCount + 1 : currentIdx + 1;
-  const progressPct  = masteryOn
-    ? Math.round((correctCount / totalUniqueQuestions) * 100)
-    : Math.round((currentIdx / sessionQuestions.length) * 100);
-
-  $('prog-cur').textContent  = displayCur;
-  $('prog-total').textContent = displayTotal;
-  $('prog-pct').textContent  = progressPct + '%';
-  $('prog-fill').style.width = progressPct + '%';
-  $('hdr-c').textContent = correctCount + ' ✓';
-  $('hdr-w').textContent = wrongCount + ' ✗';
-  $('score-chips').style.display = masteryOn ? 'none' : 'flex';
-
-  const card = $('question-card');
-  card.innerHTML = ''; card.style.animation = 'none'; void card.offsetWidth; card.style.animation = '';
-
-  const meta = document.createElement('div'); meta.className = 'question-meta';
-  meta.innerHTML = `
-    <span>Question ${displayCur} of ${displayTotal}</span>
-    <span class="q-type-badge">${q.type}</span>
-    ${masteryOn ? '<span class="mastery-badge">⚡ Mastery</span>' : ''}
-    ${q._bank ? `<span class="q-bank-badge">📋 ${escHtml(q._bank)}</span>` : ''}`;
+  const q=sessionQuestions[currentIdx], masteryOn=$('toggle-mastery').checked;
+  const displayTotal=masteryOn?totalUniqueQuestions:sessionQuestions.length;
+  const displayCur=masteryOn?correctCount+1:currentIdx+1;
+  const progressPct=masteryOn?Math.round((correctCount/totalUniqueQuestions)*100):Math.round((currentIdx/sessionQuestions.length)*100);
+  $('prog-cur').textContent=displayCur; $('prog-total').textContent=displayTotal;
+  $('prog-pct').textContent=progressPct+'%'; $('prog-fill').style.width=progressPct+'%';
+  $('hdr-c').textContent=correctCount+' ✓'; $('hdr-w').textContent=wrongCount+' ✗';
+  $('score-chips').style.display=masteryOn?'none':'flex';
+  const card=$('question-card');
+  card.innerHTML=''; card.style.animation='none'; void card.offsetWidth; card.style.animation='';
+  const meta=document.createElement('div'); meta.className='question-meta';
+  meta.innerHTML=`<span>Question ${displayCur} of ${displayTotal}</span><span class="q-type-badge">${q.type}</span>${masteryOn?'<span class="mastery-badge">⚡ Mastery</span>':''}${q._bank?`<span class="q-bank-badge">📋 ${escHtml(q._bank)}</span>`:''}`;
   card.appendChild(meta);
-
-  const qt = document.createElement('div'); qt.className = 'question-text'; qt.textContent = q.question;
-  card.appendChild(qt);
-
-  const choicesEl = document.createElement('div'); choicesEl.className = 'choices';
-  q.choices.forEach(c => {
-    const btn = document.createElement('button'); btn.className = 'choice-btn';
-    btn.innerHTML = `<div class="choice-letter">${c.letter}</div><div class="choice-text">${escHtml(c.text)}</div>`;
-    btn.addEventListener('click', () => submitAnswer(c.letter, btn, q, card));
+  const qt=document.createElement('div'); qt.className='question-text'; qt.textContent=q.question; card.appendChild(qt);
+  const choicesEl=document.createElement('div'); choicesEl.className='choices';
+  q.choices.forEach(c=>{
+    const btn=document.createElement('button'); btn.className='choice-btn';
+    btn.innerHTML=`<div class="choice-letter">${c.letter}</div><div class="choice-text">${escHtml(c.text)}</div>`;
+    btn.addEventListener('click',()=>submitAnswer(c.letter,btn,q,card));
     choicesEl.appendChild(btn);
   });
   card.appendChild(choicesEl);
 }
 
-function clearAutoAdvance() { if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; } }
+function clearAutoAdvance() { if (autoTimer) { clearTimeout(autoTimer); autoTimer=null; } }
 
-function submitAnswer(selected, btnEl, q, card) {
+function submitAnswer(selected,btnEl,q,card) {
   clearAutoAdvance();
-  const isCorrect = selected === q.answer;
-
-  card.querySelectorAll('.choice-btn').forEach(b => {
-    b.disabled = true;
-    if (b.querySelector('.choice-letter').textContent === q.answer) b.classList.add('correct');
-  });
+  const isCorrect=selected===q.answer, autoOn=$('toggle-auto').checked, masteryOn=$('toggle-mastery').checked;
+  card.querySelectorAll('.choice-btn').forEach(b=>{ b.disabled=true; if(b.querySelector('.choice-letter').textContent===q.answer) b.classList.add('correct'); });
   if (!isCorrect) btnEl.classList.add('wrong');
-
   if (isCorrect) correctCount++; else { wrongCount++; wrongPool.push(q); }
-  sessionResults.push({ q, selected, isCorrect });
-  $('hdr-c').textContent = correctCount + ' ✓';
-  $('hdr-w').textContent = wrongCount + ' ✗';
-
-  const feedback = document.createElement('div');
-  feedback.className = 'answer-feedback ' + (isCorrect ? 'correct' : 'wrong');
-  feedback.textContent = isCorrect ? '✓ Correct' : '✗ Incorrect';
-  card.appendChild(feedback);
-
-  const masteryOn = $('toggle-mastery').checked;
-  const autoOn    = $('toggle-auto').checked;
-
-  if (q.explanation && !autoOn) {
-    const reveal = document.createElement('div');
-    reveal.className = 'answer-reveal ' + (isCorrect ? 'reveal-correct' : 'reveal-wrong');
-    const expLabel = '<span style="font-size:0.7rem;font-weight:600;font-family:\'Sora\',sans-serif;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">Explanation</span>';
-    reveal.innerHTML = `<div class="reveal-body">${expLabel}<span class="exp-text"></span></div>`;
-    reveal.querySelector('.exp-text').textContent = q.explanation;
-    card.appendChild(reveal);
+  sessionResults.push({q,selected,isCorrect});
+  $('hdr-c').textContent=correctCount+' ✓'; $('hdr-w').textContent=wrongCount+' ✗';
+  const feedback=document.createElement('div'); feedback.className='answer-feedback '+(isCorrect?'correct':'wrong'); feedback.textContent=isCorrect?'✓ Correct':'✗ Incorrect'; card.appendChild(feedback);
+  if (q.explanation&&!autoOn) {
+    const reveal=document.createElement('div'); reveal.className='answer-reveal '+(isCorrect?'reveal-correct':'reveal-wrong');
+    const expLabel='<span style="font-size:0.7rem;font-weight:600;font-family:\'Sora\',sans-serif;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">Explanation</span>';
+    reveal.innerHTML=`<div class="reveal-body">${expLabel}<span class="exp-text"></span></div>`;
+    reveal.querySelector('.exp-text').textContent=q.explanation; card.appendChild(reveal);
   }
-
-  if (masteryOn && !isCorrect) sessionQuestions.push(shuffleChoices(q));
-
-  const isLast  = currentIdx + 1 >= sessionQuestions.length;
-  const advance = () => { currentIdx++; isLast ? showSummary() : renderQuestion(); };
-
+  if (masteryOn&&!isCorrect) sessionQuestions.push(shuffleChoices(q));
+  const isLast=currentIdx+1>=sessionQuestions.length;
+  const advance=()=>{ currentIdx++; isLast?showSummary():renderQuestion(); };
   if (autoOn) {
-    const barWrap = document.createElement('div'); barWrap.className = 'auto-bar-wrap';
-    const barFill = document.createElement('div'); barFill.className = 'auto-bar-fill';
+    const barWrap=document.createElement('div'); barWrap.className='auto-bar-wrap';
+    const barFill=document.createElement('div'); barFill.className='auto-bar-fill';
     barWrap.appendChild(barFill); card.appendChild(barWrap);
-    const secs = isCorrect ? AUTO_ADVANCE_CORRECT_SECS : AUTO_ADVANCE_WRONG_SECS;
-    requestAnimationFrame(() => { barFill.style.transition = `width ${secs}s linear`; barFill.style.width = '0%'; });
-    autoTimer = setTimeout(advance, secs * 1000);
+    const secs=isCorrect?AUTO_ADVANCE_CORRECT_SECS:AUTO_ADVANCE_WRONG_SECS;
+    requestAnimationFrame(()=>{ barFill.style.transition=`width ${secs}s linear`; barFill.style.width='0%'; });
+    autoTimer=setTimeout(advance,secs*1000);
   } else {
-    const next = document.createElement('button'); next.className = 'next-btn show';
-    next.textContent = isLast ? 'See Results →' : 'Next Question →';
-    next.addEventListener('click', () => advance());
-    card.appendChild(next);
+    const next=document.createElement('button'); next.className='next-btn show';
+    next.textContent=isLast?'See Results →':'Next Question →';
+    next.addEventListener('click',()=>advance()); card.appendChild(next);
   }
 }
 
 function showSummary() {
   showPage('page-summary');
-
-  // ── Shared mode: hide "Back to Banks", show only "Retry" ──
-  const backBtn = $('btn-landing');
-  backBtn.style.display = isSharedMode ? 'none' : '';
-
-  const masteryOn    = $('toggle-mastery').checked;
-  const total        = totalUniqueQuestions;
-  const totalAttempts = sessionResults.length;
-  const firstTryCorrect = sessionResults.filter((r, i) => {
-    if (!r.isCorrect) return false;
-    return sessionResults.slice(0, i).filter(x => x.q.question === r.q.question).length === 0;
-  }).length;
-  const firstTryPct = total > 0 ? Math.round((firstTryCorrect / total) * 100) : 0;
-  const retries     = totalAttempts - total;
-  const pct         = masteryOn ? firstTryPct : total > 0 ? Math.round((correctCount / total) * 100) : 0;
-
-  const circumference = 2 * Math.PI * 45;
-  const ring = $('score-ring');
-  ring.style.strokeDasharray  = circumference;
-  ring.style.strokeDashoffset = circumference;
-  setTimeout(() => {
-    ring.style.strokeDashoffset = circumference - (pct / 100) * circumference;
-    ring.style.stroke = pct >= 80 ? '#4ade80' : pct >= 60 ? '#7c6af7' : '#f87171';
-  }, 100);
-
-  $('sum-pct').textContent = pct + '%';
-  $('score-ring-label-text').textContent = masteryOn ? '1st Try' : 'Score';
-
+  $('btn-landing').style.display=isSharedMode?'none':'';
+  const masteryOn=$('toggle-mastery').checked, total=totalUniqueQuestions;
+  const totalAttempts=sessionResults.length;
+  const firstTryCorrect=sessionResults.filter((r,i)=>{ if(!r.isCorrect)return false; return sessionResults.slice(0,i).filter(x=>x.q.question===r.q.question).length===0; }).length;
+  const firstTryPct=total>0?Math.round((firstTryCorrect/total)*100):0;
+  const retries=totalAttempts-total;
+  const pct=masteryOn?firstTryPct:total>0?Math.round((correctCount/total)*100):0;
+  const circumference=2*Math.PI*45, ring=$('score-ring');
+  ring.style.strokeDasharray=circumference; ring.style.strokeDashoffset=circumference;
+  setTimeout(()=>{ ring.style.strokeDashoffset=circumference-(pct/100)*circumference; ring.style.stroke=pct>=80?'#4ade80':pct>=60?'#7c6af7':'#f87171'; },100);
+  $('sum-pct').textContent=pct+'%'; $('score-ring-label-text').textContent=masteryOn?'1st Try':'Score';
   if (masteryOn) {
-    $('sum-title').textContent = '🏆 All Mastered!';
-    $('sum-sub').textContent   = `${total} questions mastered in ${totalAttempts} attempts`;
-    $('sum-correct').textContent = total;     $('label-correct').textContent = 'Mastered';
-    $('sum-wrong').textContent   = retries;   $('label-wrong').textContent   = 'Retries';
-    $('sum-total').textContent   = firstTryPct + '%'; $('label-total').textContent = 'Accuracy';
+    $('sum-title').textContent='🏆 All Mastered!'; $('sum-sub').textContent=`${total} questions mastered in ${totalAttempts} attempts`;
+    $('sum-correct').textContent=total; $('label-correct').textContent='Mastered';
+    $('sum-wrong').textContent=retries; $('label-wrong').textContent='Retries';
+    $('sum-total').textContent=firstTryPct+'%'; $('label-total').textContent='Accuracy';
   } else {
-    $('sum-title').textContent = pct===100?'Perfect score!':pct>=80?'Great work!':pct>=60?'Good effort':'Keep practicing';
-    $('sum-sub').textContent   = `${correctCount} of ${total} correct`;
-    $('sum-correct').textContent = correctCount; $('label-correct').textContent = 'Correct';
-    $('sum-wrong').textContent   = wrongCount;   $('label-wrong').textContent   = 'Incorrect';
-    $('sum-total').textContent   = total;         $('label-total').textContent   = 'Total';
+    $('sum-title').textContent=pct===100?'Perfect score!':pct>=80?'Great work!':pct>=60?'Good effort':'Keep practicing';
+    $('sum-sub').textContent=`${correctCount} of ${total} correct`;
+    $('sum-correct').textContent=correctCount; $('label-correct').textContent='Correct';
+    $('sum-wrong').textContent=wrongCount; $('label-wrong').textContent='Incorrect';
+    $('sum-total').textContent=total; $('label-total').textContent='Total';
   }
-
-  const list = $('review-list'); list.innerHTML = '';
-  const seen = new Set(), uniqueResults = [];
-  sessionResults.forEach(r => {
-    if (!seen.has(r.q.question)) {
-      seen.add(r.q.question);
-      uniqueResults.push([...sessionResults].reverse().find(x => x.q.question === r.q.question));
-    }
-  });
-  uniqueResults.forEach((r, i) => {
-    const cc = r.q.choices.find(c => c.letter === r.q.answer);
-    const sc = r.q.choices.find(c => c.letter === r.selected);
-    const ansHtml = r.isCorrect
-      ? `<div class="review-ans-block"><div class="review-ans-row"><span class="ca">✓ ${r.q.answer} — ${escHtml(cc?.text||'')}</span></div></div>`
-      : `<div class="review-ans-block"><div class="review-ans-row">Your answer: <span class="wa">${r.selected} — ${escHtml(sc?.text||'')}</span></div><div class="review-ans-row">Correct: <span class="ca">${r.q.answer} — ${escHtml(cc?.text||'')}</span></div></div>`;
-    const item = document.createElement('div'); item.className = 'review-item';
-    item.innerHTML = `<div class="review-dot ${r.isCorrect?'c':'w'}"></div><div style="flex:1;min-width:0;"><div class="review-q">${i+1}. ${escHtml(r.q.question)}</div>${ansHtml}</div>`;
+  const list=$('review-list'); list.innerHTML='';
+  const seen=new Set(), uniqueResults=[];
+  sessionResults.forEach(r=>{ if(!seen.has(r.q.question)){seen.add(r.q.question); uniqueResults.push([...sessionResults].reverse().find(x=>x.q.question===r.q.question));} });
+  uniqueResults.forEach((r,i)=>{
+    const cc=r.q.choices.find(c=>c.letter===r.q.answer), sc=r.q.choices.find(c=>c.letter===r.selected);
+    const ansHtml=r.isCorrect
+      ?`<div class="review-ans-block"><div class="review-ans-row"><span class="ca">✓ ${r.q.answer} — ${escHtml(cc?.text||'')}</span></div></div>`
+      :`<div class="review-ans-block"><div class="review-ans-row">Your answer: <span class="wa">${r.selected} — ${escHtml(sc?.text||'')}</span></div><div class="review-ans-row">Correct: <span class="ca">${r.q.answer} — ${escHtml(cc?.text||'')}</span></div></div>`;
+    const item=document.createElement('div'); item.className='review-item';
+    item.innerHTML=`<div class="review-dot ${r.isCorrect?'c':'w'}"></div><div style="flex:1;min-width:0;"><div class="review-q">${i+1}. ${escHtml(r.q.question)}</div>${ansHtml}</div>`;
     list.appendChild(item);
   });
 }
 
 function retakeSession() {
   clearAutoAdvance();
-  if (isSharedMode && sharedBankData) {
-    const source = sharedBankData.questions.map(q => ({ ...q, _bank: sharedBankData.name }));
-    _beginSession(source);
-  } else {
-    const source = banks.filter(b => selectedIds.has(b.id)).flatMap(b => b.questions.map(q => ({ ...q, _bank: b.name })));
-    _beginSession(source);
-  }
+  if (isSharedMode&&sharedBankData) { _beginSession(sharedBankData.questions.map(q=>({...q,_bank:sharedBankData.name}))); }
+  else { _beginSession(allBanks.filter(b=>selectedIds.has(b.id)).flatMap(b=>b.questions.map(q=>({...q,_bank:b.name})))); }
 }
 
 function openQuitModal()  { $('quit-modal').classList.add('open'); }
 function closeQuitModal() { $('quit-modal').classList.remove('open'); }
 function confirmQuit() {
-  clearAutoAdvance();
-  closeQuitModal();
-  if (isSharedMode) {
-    // In shared mode, quitting goes back to the start modal
-    showPage('page-landing'); // hide exam
-    $('page-landing').classList.add('hidden');
-    $('shared-start-modal').classList.add('open');
-  } else {
-    goLanding();
-  }
+  clearAutoAdvance(); closeQuitModal();
+  if (isSharedMode) { showPage('page-landing'); $('page-landing').classList.add('hidden'); $('shared-start-modal').classList.add('open'); }
+  else { goLanding(); }
 }
 function goLanding() { showPage('page-landing'); }
 </script>
