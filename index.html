@@ -153,6 +153,17 @@
             <div class="toggle-thumb"></div>
           </label>
         </div>
+        <div class="setting-row">
+          <div class="setting-label">Question limit</div>
+          <select class="limit-select" id="select-limit">
+            <option value="0">All</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+          </select>
+        </div>
       </div>
       <div class="settings-spacer"></div>
       <div class="err-msg" id="err-msg"></div>
@@ -263,52 +274,6 @@
     </div>
   </div>
 
-  <!-- Shared bank -->
-  <div class="modal-overlay" id="shared-start-modal">
-    <div class="modal-box" id="shared-modal-box">
-      <div class="shared-modal-icon-wrap">
-        <svg viewBox="0 0 24 24">
-          <rect x="8" y="2" width="8" height="4" rx="1"/>
-          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-          <line x1="9" y1="12" x2="15" y2="12"/>
-          <line x1="9" y1="16" x2="13" y2="16"/>
-        </svg>
-      </div>
-      <div class="modal-title" id="shared-modal-title">Ready to start?</div>
-      <div class="modal-desc" id="shared-modal-desc" style="margin-bottom: 1.25rem;">Your quiz is loading…</div>
-      <div class="shared-bank-card shared-loading" id="shared-bank-info">
-        <div class="shared-bank-card-icon">
-          <svg viewBox="0 0 24 24">
-            <rect x="8" y="2" width="8" height="4" rx="1"/>
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
-          </svg>
-        </div>
-        <div class="shared-bank-card-body">
-          <div class="shared-bank-card-name" id="shared-bank-name">Loading…</div>
-          <div class="shared-bank-card-meta" id="shared-bank-meta">Fetching questions…</div>
-        </div>
-      </div>
-      <div class="settings-list" style="margin-bottom: 0;">
-        <div class="shared-settings-row">
-          <div class="shared-settings-label">Mastery mode</div>
-          <label class="toggle"><input type="checkbox" id="shared-toggle-mastery" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
-        </div>
-        <div class="shared-settings-row">
-          <div class="shared-settings-label">Shuffle questions</div>
-          <label class="toggle"><input type="checkbox" id="shared-toggle-shuffle" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
-        </div>
-        <div class="shared-settings-row">
-          <div class="shared-settings-label">Auto-advance</div>
-          <label class="toggle"><input type="checkbox" id="shared-toggle-auto" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
-        </div>
-      </div>
-      <div class="shared-modal-actions">
-        <button class="modal-btn primary" id="shared-start-btn" disabled>Start Quiz →</button>
-        <button id="shared-retry-btn">↺ Retry loading</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Password -->
   <div class="modal-overlay" id="password-modal">
     <div class="modal-box">
@@ -339,6 +304,17 @@
         <div class="setting-row">
           <div class="setting-label">Auto-advance</div>
           <label class="toggle"><input type="checkbox" id="mob-toggle-auto" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">Question limit</div>
+          <select class="limit-select" id="mob-select-limit">
+            <option value="0">All</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+          </select>
         </div>
       </div>
       <div class="modal-actions" style="margin-top: 1.25rem; justify-content: center;">

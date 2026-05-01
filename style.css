@@ -989,6 +989,23 @@ body::before {
   transform: translateX(17px);
 }
 
+/* ── Limit select ───────────────────────────────────────────────────────── */
+.limit-select {
+  background: var(--bg3);
+  border: 1px solid var(--border-hover);
+  border-radius: 7px;
+  color: var(--text);
+  font-family: 'Sora', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+  flex-shrink: 0;
+}
+
+.limit-select:focus { border-color: var(--accent); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    EXAM
@@ -1481,6 +1498,34 @@ body::before {
 .review-ans-row .ca { color: var(--correct); }
 .review-ans-row .wa { color: var(--wrong); }
 
+/* ── Retry badge ────────────────────────────────────────────────────────── */
+.retry-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.45rem;
+  border-radius: 20px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  font-family: 'Sora', sans-serif;
+  background: rgba(247, 192, 106, 0.12);
+  border: 1px solid rgba(247, 192, 106, 0.3);
+  color: var(--gold);
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+.retry-badge.retry-high {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.3);
+  color: var(--wrong);
+}
+
+.review-item.retried {
+  border-color: rgba(248, 113, 113, 0.25);
+  background: rgba(248, 113, 113, 0.04);
+}
+
 .summary-actions {
   padding: 1.25rem 1.75rem;
   padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
@@ -1653,167 +1698,6 @@ body::before {
   margin-bottom: 0.8rem;
   min-height: 1rem;
 }
-
-
-/* ── Shared bank modal ──────────────────────────────────────────────────── */
-#shared-start-modal { background: rgba(0, 0, 0, 0.72); }
-
-#shared-start-modal::before {
-  content: '';
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 520px;
-  height: 520px;
-  background: radial-gradient(circle, rgba(124, 106, 247, 0.18) 0%, transparent 65%);
-  pointer-events: none;
-  animation: ambientBreath 5s ease-in-out infinite alternate;
-  z-index: 0;
-}
-
-#shared-start-modal .modal-box {
-  max-width: 420px;
-  background: var(--bg2);
-  overflow: hidden;
-  position: relative;
-  z-index: 1;
-  border: 1px solid rgba(124, 106, 247, 0.2);
-  box-shadow: 0 0 0 1px rgba(124, 106, 247, 0.08), 0 32px 80px rgba(0, 0, 0, 0.6);
-}
-
-.shared-modal-icon-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1rem;
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: rgba(124, 106, 247, 0.12);
-  border: 1px solid rgba(124, 106, 247, 0.25);
-}
-
-.shared-modal-icon-wrap svg {
-  width: 24px;
-  height: 24px;
-  stroke: var(--accent);
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.shared-bank-card {
-  background: var(--bg3);
-  border: 1px solid var(--border-hover);
-  border-radius: var(--radius);
-  padding: 0.85rem 1rem;
-  margin-bottom: 1.25rem;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.shared-bank-card-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  background: rgba(124, 106, 247, 0.12);
-  border: 1px solid rgba(124, 106, 247, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.shared-bank-card-icon svg {
-  width: 16px;
-  height: 16px;
-  stroke: var(--accent);
-  fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.shared-bank-card-body   { flex: 1; min-width: 0; }
-
-.shared-bank-card-name {
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.shared-bank-card-meta {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  margin-top: 0.15rem;
-}
-
-.shared-settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.55rem 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.shared-settings-row:last-child { border-bottom: none; }
-.shared-settings-label { font-size: 0.85rem; color: var(--text); }
-
-.shared-modal-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  margin-top: 1.25rem;
-}
-
-#shared-start-btn {
-  background: var(--accent);
-  border: none;
-  box-shadow: 0 4px 20px rgba(124, 106, 247, 0.4);
-  transition: all 0.25s;
-  font-size: 0.95rem;
-  padding: 0.85rem;
-}
-
-#shared-start-btn:not(:disabled):hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(124, 106, 247, 0.5);
-  background: #8f7ef9;
-}
-
-#shared-start-btn:disabled {
-  opacity: 0.35;
-  box-shadow: none;
-  cursor: not-allowed;
-}
-
-#shared-retry-btn {
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid var(--border-hover);
-  font-family: 'Sora', sans-serif;
-  font-size: 0.82rem;
-  font-weight: 500;
-  border-radius: var(--radius);
-  padding: 0.6rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: none;
-}
-
-#shared-retry-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-.shared-loading .shared-bank-card-meta {
-  animation: loadingPulse 1.4s ease-in-out infinite;
-}
-
 
 /* ── Mobile settings modal overrides ────────────────────────────────────── */
 #settings-modal .modal-box    { text-align: left; }

@@ -8,7 +8,8 @@ let publicFolders=[], privateFolders=[], allBanks=[];
 let selectedIds=new Set(), activeTabId=null, searchQuery='', vaultMode='public';
 let sessionQuestions=[], sessionResults=[], wrongPool=[];
 let currentIdx=0, correctCount=0, wrongCount=0, autoTimer=null, totalUniqueQuestions=0;
-let isSharedMode=false, sharedBankData=null, currentRole=null;
+let retryCounts={};
+let currentRole=null;
 let pendingDeleteId=null, pendingPublishId=null, pendingUnpublishId=null;
 
 const $=id=>document.getElementById(id);
@@ -26,13 +27,11 @@ window.addEventListener('beforeprint',e=>e.preventDefault());
 
 window.addEventListener('DOMContentLoaded',()=>{
   const params=new URLSearchParams(window.location.search);
-  const sharedId=params.get('bank');
   setTimeout(()=>{
     $('page-splash').classList.add('fade-out');
     setTimeout(()=>{
       $('page-splash').classList.add('hidden');
-      if(sharedId&&GAS_READY){isSharedMode=true;loadSharedBank(sharedId);}
-      else showPasswordGate();
+      showPasswordGate();
     },600);
   },1800);
 
@@ -50,8 +49,6 @@ window.addEventListener('DOMContentLoaded',()=>{
   $('quit-modal').addEventListener('click',e=>{if(e.target===$('quit-modal'))closeQuitModal();});
   $('btn-landing').addEventListener('click',goLanding);
   $('btn-retake').addEventListener('click',retakeSession);
-  $('shared-start-btn').addEventListener('click',startSharedSession);
-  $('shared-retry-btn').addEventListener('click',()=>{const id=new URLSearchParams(window.location.search).get('bank');if(id){$('shared-retry-btn').style.display='none';loadSharedBank(id);}});
   $('password-submit').addEventListener('click',submitPassword);
   $('password-input').addEventListener('keydown',e=>{if(e.key==='Enter')submitPassword();});
   $('search-input').addEventListener('input',e=>{searchQuery=e.target.value.toLowerCase().trim();handleSearch();});
@@ -387,36 +384,8 @@ function handleFiles(fileList){
 async function gasGet(params){const url=new URL(GAS_URL);Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v));return(await fetch(url.toString())).json();}
 async function gasPost(params,body){const url=new URL(GAS_URL);Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v));return(await fetch(url.toString(),{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(body)})).json();}
 
-async function loadSharedBank(fileId){
-  $('shared-bank-name').textContent='Loading…';$('shared-bank-meta').textContent='Fetching questions…';
-  $('shared-modal-desc').textContent='Your quiz is loading…';
-  $('shared-bank-info').classList.add('shared-loading');
-  $('shared-start-modal').classList.add('open');$('shared-start-btn').disabled=true;$('shared-retry-btn').style.display='none';
-  try{
-    const ld=await gasGet({action:'list',drive:'public',role:'member'});
-    let name='Quiz Bank';if(!ld.error&&ld.banks){const f=ld.banks.find(b=>b.id===fileId);if(f)name=f.name;}
-    const data=await gasGet({action:'get',fileId});if(data.error)throw new Error(data.error);
-    const bytes=Uint8Array.from(atob(data.data),c=>c.charCodeAt(0));
-    const qs=parseWorkbook(bytes.buffer);
-    sharedBankData={id:fileId,name,questions:qs};
-    $('shared-bank-name').textContent=name;$('shared-bank-meta').textContent=`${qs.length} questions ready`;
-    $('shared-modal-desc').textContent='Pick your settings and hit start.';
-    $('shared-bank-info').classList.remove('shared-loading');$('shared-start-btn').disabled=false;$('shared-modal-title').textContent='Ready to start?';
-  }catch(err){
-    $('shared-bank-name').textContent='Error loading bank';$('shared-bank-meta').textContent=err.message;
-    $('shared-modal-desc').textContent='Could not load the quiz.';$('shared-bank-info').classList.remove('shared-loading');
-    $('shared-modal-title').textContent='Could not load bank';$('shared-retry-btn').style.display='block';
-  }
-}
-function startSharedSession(){
-  if(!sharedBankData)return;$('shared-start-modal').classList.remove('open');
-  $('toggle-mastery').checked=$('shared-toggle-mastery').checked;
-  $('toggle-shuffle').checked=$('shared-toggle-shuffle').checked;
-  $('toggle-auto').checked=$('shared-toggle-auto').checked;
-  _beginSession(sharedBankData.questions.map(q=>({...q,_bank:sharedBankData.name})));
-}
-function syncMobileToggles(){$('toggle-mastery').checked=$('mob-toggle-mastery').checked;$('toggle-shuffle').checked=$('mob-toggle-shuffle').checked;$('toggle-auto').checked=$('mob-toggle-auto').checked;}
-function openSettingsModal(){$('mob-toggle-mastery').checked=$('toggle-mastery').checked;$('mob-toggle-shuffle').checked=$('toggle-shuffle').checked;$('mob-toggle-auto').checked=$('toggle-auto').checked;$('settings-modal').classList.add('open');}
+function syncMobileToggles(){$('toggle-mastery').checked=$('mob-toggle-mastery').checked;$('toggle-shuffle').checked=$('mob-toggle-shuffle').checked;$('toggle-auto').checked=$('mob-toggle-auto').checked;$('select-limit').value=$('mob-select-limit').value;}
+function openSettingsModal(){$('mob-toggle-mastery').checked=$('toggle-mastery').checked;$('mob-toggle-shuffle').checked=$('toggle-shuffle').checked;$('mob-toggle-auto').checked=$('toggle-auto').checked;$('mob-select-limit').value=$('select-limit').value;$('settings-modal').classList.add('open');}
 
 function parseWorkbook(ab){
   const wb=XLSX.read(ab,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];
@@ -457,7 +426,7 @@ async function startQuiz(){
   _beginSession(sel.flatMap(b=>b.questions.map(q=>({...q,_bank:b.name}))));
 }
 async function fetchBankQuestions(bank){const data=await gasGet({action:'get',fileId:bank.id});if(data.error)throw new Error(data.error);const bytes=Uint8Array.from(atob(data.data),c=>c.charCodeAt(0));return parseWorkbook(bytes.buffer);}
-function _beginSession(source){const sh=$('toggle-shuffle').checked;let qs=sh?[...source].sort(()=>Math.random()-.5):[...source];qs=qs.map(q=>shuffleChoices(q));totalUniqueQuestions=qs.length;sessionQuestions=qs;currentIdx=0;correctCount=0;wrongCount=0;sessionResults=[];wrongPool=[];showPage('page-exam');renderQuestion();}
+function _beginSession(source){const sh=$('toggle-shuffle').checked;let qs=sh?[...source].sort(()=>Math.random()-.5):[...source];const lim=parseInt($('select-limit').value)||0;if(lim>0)qs=qs.slice(0,lim);qs=qs.map(q=>shuffleChoices(q));totalUniqueQuestions=qs.length;sessionQuestions=qs;currentIdx=0;correctCount=0;wrongCount=0;sessionResults=[];wrongPool=[];retryCounts={};showPage('page-exam');renderQuestion();}
 
 function renderQuestion(){
   const q=sessionQuestions[currentIdx],mastery=$('toggle-mastery').checked;
@@ -480,7 +449,7 @@ function submitAnswer(sel,btnEl,q,card){
   const ok=sel===q.answer,autoOn=$('toggle-auto').checked,mastery=$('toggle-mastery').checked;
   card.querySelectorAll('.choice-btn').forEach(b=>{b.disabled=true;if(b.querySelector('.choice-letter').textContent===q.answer)b.classList.add('correct');});
   if(!ok)btnEl.classList.add('wrong');
-  if(ok)correctCount++;else{wrongCount++;wrongPool.push(q);}
+  if(ok)correctCount++;else{wrongCount++;wrongPool.push(q);if($('toggle-mastery').checked)retryCounts[q.question]=(retryCounts[q.question]||0)+1;}
   sessionResults.push({q,selected:sel,isCorrect:ok});
   $('hdr-c').textContent=correctCount+' ✓';$('hdr-w').textContent=wrongCount+' ✗';
   const fb=document.createElement('div');fb.className='answer-feedback '+(ok?'correct':'wrong');fb.textContent=ok?'✓ Correct':'✗ Incorrect';card.appendChild(fb);
@@ -497,7 +466,7 @@ function submitAnswer(sel,btnEl,q,card){
 }
 
 function showSummary(){
-  showPage('page-summary');$('btn-landing').style.display=isSharedMode?'none':'';
+  showPage('page-summary');
   const mastery=$('toggle-mastery').checked,total=totalUniqueQuestions,attempts=sessionResults.length;
   const ftc=sessionResults.filter((r,i)=>{if(!r.isCorrect)return false;return sessionResults.slice(0,i).filter(x=>x.q.question===r.q.question).length===0;}).length;
   const ftPct=total>0?Math.round((ftc/total)*100):0,retries=attempts-total;
@@ -511,22 +480,20 @@ function showSummary(){
   const seen=new Set(),uniq=[];
   sessionResults.forEach(r=>{if(!seen.has(r.q.question)){seen.add(r.q.question);uniq.push([...sessionResults].reverse().find(x=>x.q.question===r.q.question));}});
   uniq.forEach((r,i)=>{
-    const cc=r.q.choices.find(c=>c.letter===r.q.answer),sc=r.q.choices.find(c=>c.letter===r.selected);
-    const ah=r.isCorrect?`<div class="review-ans-block"><div class="review-ans-row"><span class="ca">✓ ${r.q.answer} — ${escHtml(cc?.text||'')}</span></div></div>`:`<div class="review-ans-block"><div class="review-ans-row">Your answer: <span class="wa">${r.selected} — ${escHtml(sc?.text||'')}</span></div><div class="review-ans-row">Correct: <span class="ca">${r.q.answer} — ${escHtml(cc?.text||'')}</span></div></div>`;
-    const item=document.createElement('div');item.className='review-item';
-    item.innerHTML=`<div class="review-dot ${r.isCorrect?'c':'w'}"></div><div style="flex:1;min-width:0;"><div class="review-q">${i+1}. ${escHtml(r.q.question)}</div>${ah}</div>`;
-    list.appendChild(item);
-  });
+      const cc=r.q.choices.find(c=>c.letter===r.q.answer),sc=r.q.choices.find(c=>c.letter===r.selected);
+      const ah=r.isCorrect?`<div class="review-ans-block"><div class="review-ans-row"><span class="ca">✓ ${r.q.answer} — ${escHtml(cc?.text||'')}</span></div></div>`:`<div class="review-ans-block"><div class="review-ans-row">Your answer: <span class="wa">${r.selected} — ${escHtml(sc?.text||'')}</span></div><div class="review-ans-row">Correct: <span class="ca">${r.q.answer} — ${escHtml(cc?.text||'')}</span></div></div>`;
+      const retries=retryCounts[r.q.question]||0;
+      const retryBadge=retries>0?`<span class="retry-badge ${retries>1?'retry-high':''}">${retries} ${retries===1?'retry':'retries'}</span>`:'';
+      const item=document.createElement('div');item.className='review-item'+(retries>1?' retried':'');
+      item.innerHTML=`<div class="review-dot ${r.isCorrect?'c':'w'}"></div><div style="flex:1;min-width:0;"><div class="review-q" style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;"><span style="flex:1;">${i+1}. ${escHtml(r.q.question)}</span>${retryBadge}</div>${ah}</div>`;
+      list.appendChild(item);
+    });
 }
 
 function retakeSession() {
   clearAutoAdvance();
-  if(isSharedMode&&sharedBankData) {
-    _beginSession(sharedBankData.questions.map(q=>({...q,_bank:sharedBankData.name})));
-  } else {
-    _beginSession(allBanks.filter(b=>selectedIds.has(b.id)).flatMap(b=>b.questions.map(q=>({...q,_bank:b.name}))));
-  }
-};
+  _beginSession(allBanks.filter(b=>selectedIds.has(b.id)).flatMap(b=>b.questions.map(q=>({...q,_bank:b.name}))));
+}
 function openQuitModal() {
   $('quit-modal').classList.add('open');
 }
@@ -536,11 +503,7 @@ function closeQuitModal() {
 function confirmQuit() {
   clearAutoAdvance();
   closeQuitModal();
-  if(isSharedMode) {
-    showPage('page-landing');
-    $('page-landing').classList.add('hidden');
-    $('shared-start-modal').classList.add('open');
-  } else goLanding();
+  goLanding();
 }
 function goLanding() {
   showPage('page-landing');
