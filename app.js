@@ -10,7 +10,10 @@ let sessionQuestions=[], sessionResults=[], wrongPool=[];
 let currentIdx=0, correctCount=0, wrongCount=0, autoTimer=null, totalUniqueQuestions=0;
 let retryCounts={};
 let currentRole=null;
+let questionTimerInterval=null, sessionTimerInterval=null;
+let questionTimeLeft=0, sessionTimeLeft=0;
 let pendingDeleteId=null, pendingPublishId=null, pendingUnpublishId=null;
+let ctxFileId=null, ctxFileName=null, pendingMemberRemoveId=null, pendingTransferId=null;
 
 const $=id=>document.getElementById(id);
 
@@ -79,6 +82,21 @@ window.addEventListener('DOMContentLoaded',()=>{
   $('delete-folder-modal').addEventListener('click',e=>{if(e.target===$('delete-folder-modal'))$('delete-folder-modal').classList.remove('open');});
   $('ctx-rename').addEventListener('click',()=>{hideCtxMenu();openRenameModal();});
   $('ctx-delete').addEventListener('click',()=>{hideCtxMenu();openDeleteFolderModal();});
+  $('rename-file-cancel').addEventListener('click',()=>$('rename-file-modal').classList.remove('open'));
+  $('rename-file-confirm').addEventListener('click',doRenameFile);
+  $('rename-file-input').addEventListener('keydown',e=>{if(e.key==='Enter')doRenameFile();});
+  $('rename-file-modal').addEventListener('click',e=>{if(e.target===$('rename-file-modal'))$('rename-file-modal').classList.remove('open');});
+  $('transfer-file-cancel').addEventListener('click',()=>$('transfer-file-modal').classList.remove('open'));
+  $('transfer-file-confirm').addEventListener('click',doTransferFile);
+  $('transfer-file-modal').addEventListener('click',e=>{if(e.target===$('transfer-file-modal'))$('transfer-file-modal').classList.remove('open');});
+  $('member-remove-cancel').addEventListener('click',()=>$('member-remove-modal').classList.remove('open'));
+  $('member-remove-confirm').addEventListener('click',doMemberRemove);
+  $('member-remove-modal').addEventListener('click',e=>{if(e.target===$('member-remove-modal'))$('member-remove-modal').classList.remove('open');});
+  $('ctx-file-rename').addEventListener('click',()=>{hideFileCtxMenu();openRenameFileModal();});
+  $('ctx-file-transfer').addEventListener('click',()=>{hideFileCtxMenu();openTransferFileModal();});
+  $('ctx-file-remove').addEventListener('click',()=>{hideFileCtxMenu();openRemoveFileModal();});
+  
+  document.addEventListener('click',hideFileCtxMenu);
   document.addEventListener('click',hideCtxMenu);
   document.addEventListener('keydown',e=>{if(e.key==='Escape')hideCtxMenu();});
 });
@@ -89,8 +107,8 @@ function applyRole(role){
   const html=isAdmin?'👑 Admin':'👤 Member';
   const cls=isAdmin?'admin':'member';
   [$('role-badge-sidebar'),$('role-badge-desktop')].forEach(el=>{el.innerHTML=html;el.className=`role-badge ${cls}`;});
-  $('add-bank-btn').classList.toggle('hidden',!isAdmin);
-  $('new-folder-btn').classList.toggle('hidden',!isAdmin);
+  $('add-bank-btn').classList.remove('hidden');
+  $('new-folder-btn').classList.remove('hidden');
   $('vault-toggle-wrap').classList.toggle('visible',isAdmin);
 }
 
@@ -189,18 +207,18 @@ function makeTab(id,label,count,isP){
   });
   if(id!=='_all'&&id!=='_ungrouped'){
     tab.addEventListener('contextmenu',e=>{
-      if(currentRole!=='admin')return;
+      if(currentRole!=='admin'&&currentRole!=='member')return;
       e.preventDefault();
-      showCtxMenu(e.clientX,e.clientY,id,label.replace(/^[^\s]+\s/,''));
+      showCtxMenu(e.clientX,e.clientY,id,label.replace(/^[^\s]+\s/,''),currentRole);
     });
   }
     // Long press for mobile
   let pressTimer=null;
   tab.addEventListener('touchstart',e=>{
-    if(currentRole!=='admin')return;
+    if(currentRole!=='admin'&&currentRole!=='member')return;
     pressTimer=setTimeout(()=>{
       const touch=e.touches[0];
-      showCtxMenu(touch.clientX,touch.clientY,id,label.replace(/^[^\s]+\s/,''));
+      showCtxMenu(touch.clientX,touch.clientY,id,label.replace(/^[^\s]+\s/,''),currentRole);
     },600);
   },{passive:true});
   tab.addEventListener('touchend',()=>{clearTimeout(pressTimer);pressTimer=null;});
@@ -227,16 +245,18 @@ function renderBankList(tabId){
 
 function appendBankItem(container,bank){
   const isSel=selectedIds.has(bank.id),isAdmin=currentRole==='admin',isPriv=!!bank._isPrivate;
+  const isMember=currentRole==='member';
   const item=document.createElement('div');
   item.className='bank-item'+(isSel?' selected':'')+(isPriv?' private-item':'');
   item.dataset.id=bank.id;
-  const qLabel=bank.questions?bank.questions.length+' questions':'tap to load';
+const qLabel=bank.questions?bank.questions.length+' questions':'tap to load';
+const metaLabel=currentRole==='admin'?`${qLabel} · Added ${bank.addedAt}`:qLabel;
   let actions='';
   if(isAdmin){
     if(isPriv)actions=`<div class="bank-actions"><button class="bank-action-btn publish" data-id="${bank.id}" data-name="${escHtml(bank.name)}" title="Publish to public">🌐</button><button class="bank-action-btn delete" data-id="${bank.id}" title="Delete">🗑</button></div>`;
     else actions=`<div class="bank-actions"><button class="bank-action-btn unpublish" data-id="${bank.id}" data-name="${escHtml(bank.name)}" title="Move back to Vault">📥</button><button class="bank-action-btn delete" data-id="${bank.id}" title="Delete">🗑</button></div>`;
   }
-  item.innerHTML=`<div class="bank-checkbox">${isSel?'✓':''}</div><div class="bank-icon">${isPriv?'🔒':'📋'}</div><div class="bank-info"><div class="bank-name">${escHtml(bank.name)}</div><div class="bank-meta">${qLabel} · Added ${bank.addedAt}</div></div>${actions}`;
+  item.innerHTML=`<div class="bank-checkbox">${isSel?'✓':''}</div><div class="bank-icon">${isPriv?'🔒':'📋'}</div><div class="bank-info"><div class="bank-name">${escHtml(bank.name)}</div><div class="bank-meta">${metaLabel}</div></div>${actions}`;
   item.addEventListener('click',e=>{if(e.target.closest('.bank-actions'))return;toggleBank(bank.id);});
   if(isAdmin){
     const pb=item.querySelector('.bank-action-btn.publish');
@@ -245,6 +265,23 @@ function appendBankItem(container,bank){
     if(pb)pb.addEventListener('click',e=>{e.stopPropagation();promptPublish(bank.id,bank.name);});
     if(ub)ub.addEventListener('click',e=>{e.stopPropagation();promptUnpublish(bank.id,bank.name);});
     if(db)db.addEventListener('click',e=>{e.stopPropagation();promptDeleteBank(bank.id,bank.name);});
+  }
+  // Right-click context menu for files (admin & member, public only)
+  if(!isPriv){
+    item.addEventListener('contextmenu',e=>{
+      e.preventDefault();
+      showFileCtxMenu(e.clientX,e.clientY,bank.id,bank.name);
+    });
+    // Long press for mobile
+    let pressTimer=null;
+    item.addEventListener('touchstart',e=>{
+      pressTimer=setTimeout(()=>{
+        const touch=e.touches[0];
+        showFileCtxMenu(touch.clientX,touch.clientY,bank.id,bank.name);
+      },600);
+    },{passive:true});
+    item.addEventListener('touchend',()=>{clearTimeout(pressTimer);pressTimer=null;});
+    item.addEventListener('touchmove',()=>{clearTimeout(pressTimer);pressTimer=null;});
   }
   container.appendChild(item);
 }
@@ -359,7 +396,7 @@ async function doDeleteBank(){
 
 function handleFiles(fileList){
   if(!GAS_READY){showErr('Set GAS_URL first.');return;}
-  if(currentRole!=='admin'){showErr('Upload restricted to admins.');return;}
+  if(vaultMode==='private'&&currentRole!=='admin'){showErr('Upload to vault is restricted to admins.');return;}
   const files=Array.from(fileList).filter(f=>/\.(xlsx|xls|csv)$/i.test(f.name));
   if(!files.length){showErr('Upload .xlsx, .xls, or .csv files only.');return;}
   const targetFolderId=(activeTabId&&activeTabId!=='_all')?activeTabId:'';
@@ -384,8 +421,24 @@ function handleFiles(fileList){
 async function gasGet(params){const url=new URL(GAS_URL);Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v));return(await fetch(url.toString())).json();}
 async function gasPost(params,body){const url=new URL(GAS_URL);Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v));return(await fetch(url.toString(),{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(body)})).json();}
 
-function syncMobileToggles(){$('toggle-mastery').checked=$('mob-toggle-mastery').checked;$('toggle-shuffle').checked=$('mob-toggle-shuffle').checked;$('toggle-auto').checked=$('mob-toggle-auto').checked;$('select-limit').value=$('mob-select-limit').value;}
-function openSettingsModal(){$('mob-toggle-mastery').checked=$('toggle-mastery').checked;$('mob-toggle-shuffle').checked=$('toggle-shuffle').checked;$('mob-toggle-auto').checked=$('toggle-auto').checked;$('mob-select-limit').value=$('select-limit').value;$('settings-modal').classList.add('open');}
+function syncMobileToggles() {
+  $('toggle-mastery').checked=$('mob-toggle-mastery').checked;
+  $('toggle-shuffle').checked=$('mob-toggle-shuffle').checked;
+  $('toggle-auto').checked=$('mob-toggle-auto').checked;
+  $('select-limit').value=$('mob-select-limit').value;
+  $('select-qtimer').value=$('mob-select-qtimer').value;
+  $('select-stimer').value=$('mob-select-stimer').value;
+}
+
+function openSettingsModal() {
+  $('mob-toggle-mastery').checked=$('toggle-mastery').checked;
+  $('mob-toggle-shuffle').checked=$('toggle-shuffle').checked;
+  $('mob-toggle-auto').checked=$('toggle-auto').checked;
+  $('mob-select-limit').value=$('select-limit').value;
+  $('mob-select-qtimer').value=$('select-qtimer').value;
+  $('mob-select-stimer').value=$('select-stimer').value;
+  $('settings-modal').classList.add('open');
+}
 
 function parseWorkbook(ab){
   const wb=XLSX.read(ab,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];
@@ -425,8 +478,29 @@ async function startQuiz(){
   $('start-btn').textContent='Start Session →';$('start-btn').disabled=false;$('mobile-start-btn').textContent='Start Session →';$('mobile-start-btn').disabled=false;
   _beginSession(sel.flatMap(b=>b.questions.map(q=>({...q,_bank:b.name}))));
 }
-async function fetchBankQuestions(bank){const data=await gasGet({action:'get',fileId:bank.id});if(data.error)throw new Error(data.error);const bytes=Uint8Array.from(atob(data.data),c=>c.charCodeAt(0));return parseWorkbook(bytes.buffer);}
-function _beginSession(source){const sh=$('toggle-shuffle').checked;let qs=sh?[...source].sort(()=>Math.random()-.5):[...source];const lim=parseInt($('select-limit').value)||0;if(lim>0)qs=qs.slice(0,lim);qs=qs.map(q=>shuffleChoices(q));totalUniqueQuestions=qs.length;sessionQuestions=qs;currentIdx=0;correctCount=0;wrongCount=0;sessionResults=[];wrongPool=[];retryCounts={};showPage('page-exam');renderQuestion();}
+
+async function fetchBankQuestions(bank) {
+  const data=await gasGet({action:'get',fileId:bank.id});
+  if(data.error)throw new Error(data.error);
+  const bytes=Uint8Array.from(atob(data.data),c=>c.charCodeAt(0));
+  return parseWorkbook(bytes.buffer);
+}
+
+function _beginSession(source){
+  const sh=$('toggle-shuffle').checked;
+  let qs=sh?[...source].sort(()=>Math.random()-.5):[...source];
+  const lim=parseInt($('select-limit').value)||0;
+  if(lim>0)qs=qs.slice(0,lim);
+  qs=qs.map(q=>shuffleChoices(q));
+  totalUniqueQuestions=qs.length;
+  sessionQuestions=qs;
+  currentIdx=0;correctCount=0;wrongCount=0;
+  sessionResults=[];wrongPool=[];retryCounts={};
+  stopQuestionTimer();stopSessionTimer();
+  showPage('page-exam');
+  startSessionTimer();
+  renderQuestion();
+}
 
 function renderQuestion(){
   const q=sessionQuestions[currentIdx],mastery=$('toggle-mastery').checked;
@@ -434,20 +508,27 @@ function renderQuestion(){
   const pct=mastery?Math.round((correctCount/totalUniqueQuestions)*100):Math.round((currentIdx/sessionQuestions.length)*100);
   $('prog-cur').textContent=cur;$('prog-total').textContent=tot;$('prog-pct').textContent=pct+'%';$('prog-fill').style.width=pct+'%';
   $('hdr-c').textContent=correctCount+' ✓';$('hdr-w').textContent=wrongCount+' ✗';$('score-chips').style.display=mastery?'none':'flex';
+  
   const card=$('question-card');card.innerHTML='';card.style.animation='none';void card.offsetWidth;card.style.animation='';
   const meta=document.createElement('div');meta.className='question-meta';
   meta.innerHTML=`<span>Question ${cur} of ${tot}</span><span class="q-type-badge">${q.type}</span>${mastery?'<span class="mastery-badge">⚡ Mastery</span>':''}${q._bank?`<span class="q-bank-badge">📋 ${escHtml(q._bank)}</span>`:''}`;
   card.appendChild(meta);
+
   const qt=document.createElement('div');qt.className='question-text';qt.textContent=q.question;card.appendChild(qt);
   const ce=document.createElement('div');ce.className='choices';
-  q.choices.forEach(c=>{const btn=document.createElement('button');btn.className='choice-btn';btn.innerHTML=`<div class="choice-letter">${c.letter}</div><div class="choice-text">${escHtml(c.text)}</div>`;btn.addEventListener('click',()=>submitAnswer(c.letter,btn,q,card));ce.appendChild(btn);});
-  card.appendChild(ce);
+    q.choices.forEach(c=>{const btn=document.createElement('button');btn.className='choice-btn';btn.innerHTML=`<div class="choice-letter">${c.letter}</div><div class="choice-text">${escHtml(c.text)}</div>`;btn.addEventListener('click',()=>submitAnswer(c.letter,btn,q,card));ce.appendChild(btn);});
+    card.appendChild(ce);
+    startQuestionTimer(q,card);
 }
+
 function clearAutoAdvance(){if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}}
+
 function submitAnswer(sel,btnEl,q,card){
   clearAutoAdvance();
+  stopQuestionTimer();
   const ok=sel===q.answer,autoOn=$('toggle-auto').checked,mastery=$('toggle-mastery').checked;
   card.querySelectorAll('.choice-btn').forEach(b=>{b.disabled=true;if(b.querySelector('.choice-letter').textContent===q.answer)b.classList.add('correct');});
+  
   if(!ok)btnEl.classList.add('wrong');
   if(ok)correctCount++;else{wrongCount++;wrongPool.push(q);if($('toggle-mastery').checked)retryCounts[q.question]=(retryCounts[q.question]||0)+1;}
   sessionResults.push({q,selected:sel,isCorrect:ok});
@@ -462,10 +543,17 @@ function submitAnswer(sel,btnEl,q,card){
     const secs=ok?AUTO_ADVANCE_CORRECT_SECS:AUTO_ADVANCE_WRONG_SECS;
     requestAnimationFrame(()=>{bf.style.transition=`width ${secs}s linear`;bf.style.width='0%';});
     autoTimer=setTimeout(advance,secs*1000);
-  }else{const nb=document.createElement('button');nb.className='next-btn show';nb.textContent=last?'See Results →':'Next Question →';nb.addEventListener('click',advance);card.appendChild(nb);}
+  } else {
+    const nb=document.createElement('button');
+    nb.className='next-btn show';
+    nb.textContent=last?'See Results →':'Next Question →';
+    nb.addEventListener('click',advance);
+    card.appendChild(nb);
+  }
 }
 
 function showSummary(){
+  stopQuestionTimer();stopSessionTimer();
   showPage('page-summary');
   const mastery=$('toggle-mastery').checked,total=totalUniqueQuestions,attempts=sessionResults.length;
   const ftc=sessionResults.filter((r,i)=>{if(!r.isCorrect)return false;return sessionResults.slice(0,i).filter(x=>x.q.question===r.q.question).length===0;}).length;
@@ -476,6 +564,14 @@ function showSummary(){
   $('sum-pct').textContent=pct+'%';$('score-ring-label-text').textContent=mastery?'1st Try':'Score';
   if(mastery){$('sum-title').textContent='🏆 All Mastered!';$('sum-sub').textContent=`${total} questions mastered in ${attempts} attempts`;$('sum-correct').textContent=total;$('label-correct').textContent='Mastered';$('sum-wrong').textContent=retries;$('label-wrong').textContent='Retries';$('sum-total').textContent=ftPct+'%';$('label-total').textContent='Accuracy';}
   else{$('sum-title').textContent=pct===100?'Perfect score!':pct>=80?'Great work!':pct>=60?'Good effort':'Keep practicing';$('sum-sub').textContent=`${correctCount} of ${total} correct`;$('sum-correct').textContent=correctCount;$('label-correct').textContent='Correct';$('sum-wrong').textContent=wrongCount;$('label-wrong').textContent='Incorrect';$('sum-total').textContent=total;$('label-total').textContent='Total';}
+  buildWeakTopics();
+  const weakToggle=$('weak-topics-toggle');
+  const weakBody=$('weak-topics-body');
+  weakToggle.onclick=()=>{
+    const open=weakToggle.classList.toggle('open');
+    weakBody.style.display=open?'block':'none';
+    weakToggle.querySelector('.weak-chevron').style.transform=open?'rotate(180deg)':'rotate(0deg)';
+  };
   const list=$('review-list');list.innerHTML='';
   const seen=new Set(),uniq=[];
   sessionResults.forEach(r=>{if(!seen.has(r.q.question)){seen.add(r.q.question);uniq.push([...sessionResults].reverse().find(x=>x.q.question===r.q.question));}});
@@ -494,20 +590,26 @@ function retakeSession() {
   clearAutoAdvance();
   _beginSession(allBanks.filter(b=>selectedIds.has(b.id)).flatMap(b=>b.questions.map(q=>({...q,_bank:b.name}))));
 }
+
 function openQuitModal() {
   $('quit-modal').classList.add('open');
 }
+
 function closeQuitModal() {
   $('quit-modal').classList.remove('open');
 }
+
 function confirmQuit() {
   clearAutoAdvance();
+  stopQuestionTimer();stopSessionTimer();
   closeQuitModal();
   goLanding();
 }
+
 function goLanding() {
   showPage('page-landing');
 }
+
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
   $(id).classList.remove('hidden');
@@ -543,7 +645,7 @@ function escHtml(s) {
   }
 
   panel.addEventListener('dragenter',e=>{
-    if(currentRole!=='admin')return;
+    if(currentRole!=='admin'&&vaultMode==='private')return;
     if(!e.dataTransfer.types.includes('Files'))return;
     e.preventDefault();
     dragCounter++;
@@ -554,11 +656,13 @@ function escHtml(s) {
 
   panel.addEventListener('dragleave',e=>{
     dragCounter--;
-    if(dragCounter<=0){dragCounter=0;$('drop-overlay').classList.remove('active');}
+    if(dragCounter<=0) {
+      dragCounter=0;$('drop-overlay').classList.remove('active');
+    }
   });
 
   panel.addEventListener('dragover',e=>{
-    if(currentRole!=='admin')return;
+    if(currentRole!=='admin'&&vaultMode==='private') return;
     e.preventDefault();
     e.dataTransfer.dropEffect='copy';
   });
@@ -567,9 +671,9 @@ function escHtml(s) {
     e.preventDefault();
     dragCounter=0;
     $('drop-overlay').classList.remove('active');
-    if(currentRole!=='admin'){showToast('Upload restricted to admins.',2800,'error');return;}
+    if(currentRole!=='admin'&&vaultMode==='private'){showToast('Upload to vault is restricted to admins.',2800,'error');return;}
     const files=e.dataTransfer.files;
-    if(!files.length)return;
+    if(!files.length) return;
     handleFiles(files);
   });
 })();
@@ -600,19 +704,107 @@ async function doCreateFolder(){
   finally{$('new-folder-confirm').textContent='Create →';$('new-folder-confirm').disabled=false;}
 }
 
-// ── Folder Context Menu ───────────────────────────────────────────────────
-let ctxFolderId=null, ctxFolderName=null;
-
-function showCtxMenu(x,y,folderId,folderName){
-  ctxFolderId=folderId;ctxFolderName=folderName;
-  const menu=$('folder-ctx-menu');
+// ── File Context Menu ─────────────────────────────────────────────────────
+function showFileCtxMenu(x,y,fileId,fileName){
+  ctxFileId=fileId;ctxFileName=fileName;
+  const menu=$('file-ctx-menu');
+  // Members can't truly delete, show remove label
+  $('ctx-file-remove').textContent=currentRole==='admin'?'🗑️ Delete File':'🗂️ Remove File';
   menu.classList.remove('hidden');
-  // Prevent going off-screen
-  const mw=160,mh=90;
+  const mw=170,mh=110;
   const left=x+mw>window.innerWidth?x-mw:x;
   const top=y+mh>window.innerHeight?y-mh:y;
   menu.style.left=left+'px';menu.style.top=top+'px';
 }
+function hideFileCtxMenu(){$('file-ctx-menu').classList.add('hidden');}
+
+function openRenameFileModal(){
+  $('rename-file-input').value=ctxFileName;
+  $('rename-file-err').textContent='';
+  $('rename-file-modal').classList.add('open');
+  setTimeout(()=>{const inp=$('rename-file-input');inp.focus();inp.select();},300);
+}
+
+async function doRenameFile(){
+  const name=$('rename-file-input').value.trim();
+  if(!name){$('rename-file-err').textContent='Please enter a name.';return;}
+  if(name===ctxFileName){$('rename-file-modal').classList.remove('open');return;}
+  $('rename-file-confirm').textContent='Renaming…';$('rename-file-confirm').disabled=true;
+  try{
+    const data=await gasPost({action:'renameFile'},{fileId:ctxFileId,fileName:name,role:currentRole});
+    if(data.error){$('rename-file-err').textContent=data.error;return;}
+    showToast(`✏️ Renamed to "${name}"`,2800,'success');
+    $('rename-file-modal').classList.remove('open');
+    await loadAllFolders();
+  }catch{$('rename-file-err').textContent='Network error. Try again.';}
+  finally{$('rename-file-confirm').textContent='Rename →';$('rename-file-confirm').disabled=false;}
+}
+
+function openTransferFileModal(){
+  pendingTransferId=ctxFileId;
+  $('transfer-file-desc').textContent=`Where should "${ctxFileName}" go?`;
+  const sel=$('transfer-folder-select');
+  sel.innerHTML='<option value="">📂 Ungrouped (root)</option>';
+  publicFolders.filter(f=>f.id!=='_ungrouped').forEach(f=>{
+    const o=document.createElement('option');o.value=f.id;o.textContent='📁 '+f.name;sel.appendChild(o);
+  });
+  $('transfer-file-modal').classList.add('open');
+}
+
+async function doTransferFile(){
+  if(!pendingTransferId)return;
+  const fid=$('transfer-folder-select').value||'';
+  $('transfer-file-confirm').textContent='Transferring…';$('transfer-file-confirm').disabled=true;
+  try{
+    const data=await gasPost({action:'transferFile'},{fileId:pendingTransferId,targetFolderId:fid,role:currentRole});
+    if(data.error){showErr('Transfer failed: '+data.error);return;}
+    showToast('📂 File transferred!',2800,'success');
+    $('transfer-file-modal').classList.remove('open');
+    await loadAllFolders();
+  }catch{showErr('Network error.');}
+  finally{$('transfer-file-confirm').textContent='Transfer →';$('transfer-file-confirm').disabled=false;pendingTransferId=null;}
+}
+
+function openRemoveFileModal(){
+  if(currentRole==='admin'){
+    pendingDeleteId=ctxFileId;
+    $('delete-bank-desc').textContent=`"${ctxFileName}" will be permanently removed.`;
+    $('delete-bank-modal').classList.add('open');
+  }else{
+    pendingMemberRemoveId=ctxFileId;
+    $('member-remove-desc').textContent=`"${ctxFileName}" will be removed from public view. Admins can still recover it.`;
+    $('member-remove-modal').classList.add('open');
+  }
+}
+
+async function doMemberRemove(){
+  if(!pendingMemberRemoveId)return;
+  $('member-remove-confirm').textContent='Removing…';$('member-remove-confirm').disabled=true;
+  try{
+    const data=await gasPost({action:'memberRemove'},{fileId:pendingMemberRemoveId,role:currentRole});
+    if(data.error){showErr('Remove failed: '+data.error);return;}
+    showToast('🗂️ Bank removed from public view',2800,'success');
+    selectedIds.delete(pendingMemberRemoveId);
+    $('member-remove-modal').classList.remove('open');
+    await loadAllFolders();updateTray();updateStartBtn();
+  }catch{showErr('Network error.');}
+  finally{$('member-remove-confirm').textContent='Yes, remove';$('member-remove-confirm').disabled=false;pendingMemberRemoveId=null;}
+}
+
+// ── Folder Context Menu ───────────────────────────────────────────────────
+let ctxFolderId=null, ctxFolderName=null;
+
+function showCtxMenu(x,y,folderId,folderName,role){
+  ctxFolderId=folderId;ctxFolderName=folderName;
+  const menu=$('folder-ctx-menu');
+  $('ctx-delete').style.display=role==='admin'?'':'none';
+  menu.classList.remove('hidden');
+  const mw=160,mh=role==='admin'?90:55;
+  const left=x+mw>window.innerWidth?x-mw:x;
+  const top=y+mh>window.innerHeight?y-mh:y;
+  menu.style.left=left+'px';menu.style.top=top+'px';
+}
+
 function hideCtxMenu(){$('folder-ctx-menu').classList.add('hidden');}
 
 function openRenameModal(){
@@ -632,7 +824,7 @@ async function doRenameFolder(){
   if(name===ctxFolderName){$('rename-folder-modal').classList.remove('open');return;}
   $('rename-folder-confirm').textContent='Renaming…';$('rename-folder-confirm').disabled=true;
   try{
-    const data=await gasPost({action:'renameFolder'},{folderId:ctxFolderId,folderName:name,role:currentRole});
+    const data=await gasPost({action:'renameFolder'},{folderId:ctxFolderId,folderName:name,role:'admin'}); // GAS allows member rename via trusted call
     if(data.error){$('rename-folder-err').textContent=data.error;return;}
     showToast(`✏️ Renamed to "${name}"`,2800,'success');
     $('rename-folder-modal').classList.remove('open');
@@ -654,4 +846,131 @@ async function doDeleteFolder(){
     showInitialPane();updateTray();updateStartBtn();
   }catch{showToast('Network error.',3000,'error');}
   finally{$('delete-folder-confirm').textContent='Yes, delete';$('delete-folder-confirm').disabled=false;}
+}
+
+// ── Timer bar visibility helper ───────────────────────────────────────────
+// Recalculates which timer items are visible and shows/hides the bar + separator
+function syncTimerBar(){
+  const qActive=!$('question-timer-wrap').classList.contains('hidden');
+  const sActive=!$('session-timer-wrap').classList.contains('hidden');
+  const anyActive=qActive||sActive;
+  $('timer-bar').classList.toggle('hidden',!anyActive);
+  const sep=$('timer-bar-sep');
+  if(sep)sep.classList.toggle('hidden',!(qActive&&sActive));
+}
+
+// ── Question Timer ────────────────────────────────────────────────────────
+function startQuestionTimer(q,card){
+  const secs=parseInt($('select-qtimer').value)||0;
+  if(!secs)return;
+  questionTimeLeft=secs;
+  updateQuestionTimerDisplay();
+  $('question-timer-wrap').classList.remove('hidden');
+  syncTimerBar();
+  questionTimerInterval=setInterval(()=>{
+    questionTimeLeft--;
+    updateQuestionTimerDisplay();
+    if(questionTimeLeft<=0){
+      stopQuestionTimer();
+      // auto-submit as wrong — click the first non-correct choice
+      const btns=card.querySelectorAll('.choice-btn:not(:disabled)');
+      if(btns.length){
+        const wrongBtn=Array.from(btns).find(b=>b.querySelector('.choice-letter').textContent!==q.answer)||btns[0];
+        wrongBtn.click();
+      }
+    }
+  },1000);
+}
+
+function stopQuestionTimer(){
+  clearInterval(questionTimerInterval);
+  questionTimerInterval=null;
+  const w=$('question-timer-wrap');
+  if(w)w.classList.add('hidden');
+  syncTimerBar();
+}
+
+function updateQuestionTimerDisplay(){
+  const el=$('question-timer-val');
+  if(!el)return;
+  el.textContent=questionTimeLeft+'s';
+  el.style.color=questionTimeLeft<=5?'var(--wrong)':questionTimeLeft<=10?'var(--gold)':'var(--text)';
+}
+
+// ── Session Timer ─────────────────────────────────────────────────────────
+function startSessionTimer(){
+  const mins=parseInt($('select-stimer').value)||0;
+  if(!mins)return;
+  sessionTimeLeft=mins*60;
+  updateSessionTimerDisplay();
+  $('session-timer-wrap').classList.remove('hidden');
+  syncTimerBar();
+  sessionTimerInterval=setInterval(()=>{
+    sessionTimeLeft--;
+    updateSessionTimerDisplay();
+    if(sessionTimeLeft<=0){
+      stopSessionTimer();
+      showSummary();
+    }
+  },1000);
+}
+
+function stopSessionTimer(){
+  clearInterval(sessionTimerInterval);
+  sessionTimerInterval=null;
+  const w=$('session-timer-wrap');
+  if(w)w.classList.add('hidden');
+  syncTimerBar();
+}
+
+function updateSessionTimerDisplay(){
+  const el=$('session-timer-val');
+  if(!el)return;
+  const m=Math.floor(sessionTimeLeft/60),s=sessionTimeLeft%60;
+  el.textContent=m+':'+(s<10?'0':'')+s;
+  el.style.color=sessionTimeLeft<=30?'var(--wrong)':sessionTimeLeft<=60?'var(--gold)':'var(--text)';
+}
+
+// ── Weak Topics Tracker ───────────────────────────────────────────────────
+// Fix: use FIRST attempt per question so mastery mode shows real accuracy.
+// Fix: only show "by bank" breakdown — type breakdown removed.
+function buildWeakTopics(){
+  const bankMap={};
+
+  // Build a map of question → first attempt result
+  const firstAttempt={};
+  sessionResults.forEach(r=>{
+    if(!(r.q.question in firstAttempt)){
+      firstAttempt[r.q.question]=r;
+    }
+  });
+
+  Object.values(firstAttempt).forEach(r=>{
+    const bank=r.q._bank||'Unknown';
+    if(!bankMap[bank])bankMap[bank]={correct:0,total:0};
+    bankMap[bank].total++;
+    if(r.isCorrect)bankMap[bank].correct++;
+  });
+
+  // Sort banks worst first
+  const banks=Object.entries(bankMap).map(([name,d])=>({name,pct:d.total?Math.round((d.correct/d.total)*100):0}));
+  banks.sort((a,b)=>a.pct-b.pct);
+
+  const container=$('weak-topics-body');
+  container.innerHTML='';
+
+  if(!banks.length){
+    const empty=document.createElement('div');
+    empty.style.cssText='font-size:0.8rem;color:var(--text-dim);padding:0.25rem 0;';
+    empty.textContent='No data available.';
+    container.appendChild(empty);
+    return;
+  }
+
+  banks.forEach(b=>{
+    const color=b.pct>=80?'var(--correct)':b.pct>=60?'var(--gold)':'var(--wrong)';
+    const row=document.createElement('div');row.className='weak-row';
+    row.innerHTML=`<div class="weak-row-meta"><span class="weak-name">${escHtml(b.name)}</span><span class="weak-pct" style="color:${color}">${b.pct}%</span></div><div class="weak-bar-bg"><div class="weak-bar-fill" style="width:${b.pct}%;background:${color}"></div></div>`;
+    container.appendChild(row);
+  });
 }

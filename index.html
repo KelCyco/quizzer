@@ -164,6 +164,27 @@
             <option value="200">200</option>
           </select>
         </div>
+        <div class="setting-row">
+          <div class="setting-label">Q. timer (sec)</div>
+          <select class="limit-select" id="select-qtimer">
+            <option value="0">Off</option>
+            <option value="15">15s</option>
+            <option value="30">30s</option>
+            <option value="45">45s</option>
+            <option value="60">60s</option>
+            <option value="90">90s</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">Session timer</div>
+          <select class="limit-select" id="select-stimer">
+            <option value="0">Off</option>
+            <option value="30">30m</option>
+            <option value="60">1hr</option>
+            <option value="120">2hr</option>
+            <option value="180">3hr</option>
+          </select>
+        </div>
       </div>
       <div class="settings-spacer"></div>
       <div class="err-msg" id="err-msg"></div>
@@ -199,6 +220,21 @@
         <span class="score-chip w" id="hdr-w">0 ✗</span>
       </div>
     </header>
+
+    <!-- Timer bar: slim strip below header, only visible when a timer is active -->
+    <div class="timer-bar hidden" id="timer-bar">
+      <div class="timer-bar-item hidden" id="question-timer-wrap">
+        <span class="timer-bar-icon">⏱</span>
+        <span class="timer-bar-label">Question</span>
+        <span class="timer-bar-val" id="question-timer-val">30s</span>
+      </div>
+      <div class="timer-bar-sep hidden" id="timer-bar-sep"></div>
+      <div class="timer-bar-item hidden" id="session-timer-wrap">
+        <span class="timer-bar-icon">🕐</span>
+        <span class="timer-bar-label">Session</span>
+        <span class="timer-bar-val" id="session-timer-val">30:00</span>
+      </div>
+    </div>
 
     <div class="exam-body">
       <div class="question-card" id="question-card"></div>
@@ -243,6 +279,13 @@
         </div>
       </div>
 
+      <div class="summary-weak">
+        <div class="weak-topics-toggle" id="weak-topics-toggle">
+          <span class="weak-topics-title">Weak Topics</span>
+          <svg class="weak-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="weak-topics-body" id="weak-topics-body" style="display:none;"></div>
+      </div>
       <div class="summary-review">
         <div class="review-title">Answer Review</div>
         <div class="review-list" id="review-list"></div>
@@ -314,6 +357,27 @@
             <option value="50">50</option>
             <option value="100">100</option>
             <option value="200">200</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">Q. timer (sec)</div>
+          <select class="limit-select" id="mob-select-qtimer">
+            <option value="0">Off</option>
+            <option value="15">15s</option>
+            <option value="30">30s</option>
+            <option value="45">45s</option>
+            <option value="60">60s</option>
+            <option value="90">90s</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">Session timer</div>
+          <select class="limit-select" id="mob-select-stimer">
+            <option value="0">Off</option>
+            <option value="30">30m</option>
+            <option value="60">1hr</option>
+            <option value="120">2hr</option>
+            <option value="180">3hr</option>
           </select>
         </div>
       </div>
@@ -412,6 +476,56 @@
     <button class="ctx-item" id="ctx-rename">✏️ Rename Folder</button>
     <button class="ctx-item ctx-danger" id="ctx-delete">🗑️ Delete Folder</button>
   </div>
+
+  <!-- Rename file -->
+  <div class="modal-overlay" id="rename-file-modal">
+    <div class="modal-box">
+      <div class="modal-icon">✏️</div>
+      <div class="modal-title">Rename File</div>
+      <input class="password-input" id="rename-file-input" type="text" placeholder="New name…" maxlength="100" autocomplete="off" style="letter-spacing: normal; font-size: 0.95rem;">
+      <div class="password-err" id="rename-file-err"></div>
+      <div class="modal-actions">
+        <button class="modal-btn ghost" id="rename-file-cancel">Cancel</button>
+        <button class="modal-btn primary" id="rename-file-confirm">Rename →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transfer file -->
+  <div class="modal-overlay" id="transfer-file-modal">
+    <div class="modal-box">
+      <div class="modal-icon">📂</div>
+      <div class="modal-title">Transfer File</div>
+      <div class="modal-desc" id="transfer-file-desc">Choose a destination folder.</div>
+      <select class="modal-select" id="transfer-folder-select">
+        <option value="">📂 Ungrouped (root)</option>
+      </select>
+      <div class="modal-actions">
+        <button class="modal-btn ghost" id="transfer-file-cancel">Cancel</button>
+        <button class="modal-btn primary" id="transfer-file-confirm">Transfer →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Member remove bank (moves to vault) -->
+  <div class="modal-overlay" id="member-remove-modal">
+    <div class="modal-box">
+      <div class="modal-icon">🗂️</div>
+      <div class="modal-title">Remove this bank?</div>
+      <div class="modal-desc" id="member-remove-desc">This bank will be removed from public view. Admins can still recover it.</div>
+      <div class="modal-actions">
+        <button class="modal-btn ghost" id="member-remove-cancel">Cancel</button>
+        <button class="modal-btn danger" id="member-remove-confirm">Yes, remove</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- File context menu -->
+  <div class="ctx-menu hidden" id="file-ctx-menu">
+    <button class="ctx-item" id="ctx-file-rename">✏️ Rename File</button>
+    <button class="ctx-item" id="ctx-file-transfer">📂 Transfer to Folder</button>
+    <button class="ctx-item ctx-danger" id="ctx-file-remove">🗑️ Remove</button>
+  </div>  
 
   <!-- Toast -->
   <div class="toast" id="toast"></div>
