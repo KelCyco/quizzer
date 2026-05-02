@@ -33,7 +33,6 @@
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <div id="page-landing" class="page hidden">
 
-    <!-- Logo sidebar (desktop) / topbar (mobile) -->
     <div class="logo-sidebar">
       <svg width="40" height="40" viewBox="0 0 56 56" fill="none">
         <rect width="56" height="56" rx="14" fill="#1e1e28"/>
@@ -46,7 +45,6 @@
       <span id="role-badge-sidebar" class="role-badge"></span>
     </div>
 
-    <!-- Banks column -->
     <div class="banks-col">
 
       <div class="config-banner hidden" id="config-banner">
@@ -57,14 +55,12 @@
       <div class="banks-body">
         <div class="materials-panel" id="materials-panel">
 
-          <!-- Drag-to-upload overlay -->
           <div class="drop-overlay" id="drop-overlay">
             <div class="drop-overlay-icon">📥</div>
             <div class="drop-overlay-label">Drop to upload</div>
             <div class="drop-overlay-sub" id="drop-overlay-sub">Uploading to current folder</div>
           </div>
 
-          <!-- Panel header -->
           <div class="materials-header">
             <span class="materials-title">Question Banks</span>
             <span class="bank-count-badge" id="bank-count-badge">0</span>
@@ -85,14 +81,12 @@
             <input type="file" id="file-input" accept=".xlsx,.xls,.csv" multiple>
           </div>
 
-          <!-- Folder tabs -->
           <div class="folder-tabs-bar" id="folder-tabs-bar">
             <button class="new-folder-tab-btn hidden" id="new-folder-btn" title="New Folder">＋</button>
             <div class="tabs-spacer"></div>
             <button class="select-all-btn hidden-btn" id="select-all-btn">Select All</button>
           </div>
 
-          <!-- Bank list -->
           <div class="bank-pane" id="bank-pane">
             <div class="bank-pane-empty">
               <div class="bank-pane-empty-icon">📁</div>
@@ -101,7 +95,6 @@
             </div>
           </div>
 
-          <!-- Selected banks tray -->
           <div class="selected-tray empty" id="selected-tray">
             <div class="tray-collapsed" id="tray-collapsed">
               <span class="tray-label">Selected</span>
@@ -116,7 +109,6 @@
         </div><!-- /materials-panel -->
       </div><!-- /banks-body -->
 
-      <!-- Mobile bottom strip -->
       <div class="mobile-bottom-strip">
         <button class="mobile-settings-btn" id="mobile-settings-btn">⚙ Settings</button>
         <button class="mobile-start-btn" id="mobile-start-btn" disabled>Start Session →</button>
@@ -124,7 +116,6 @@
 
     </div><!-- /banks-col -->
 
-    <!-- Desktop settings sidebar -->
     <div class="settings-col">
       <div class="settings-title">Session Settings</div>
       <span id="role-badge-desktop" class="role-badge"></span>
@@ -221,7 +212,6 @@
       </div>
     </header>
 
-    <!-- Timer bar: slim strip below header, only visible when a timer is active -->
     <div class="timer-bar hidden" id="timer-bar">
       <div class="timer-bar-item hidden" id="question-timer-wrap">
         <span class="timer-bar-icon">⏱</span>
@@ -304,12 +294,35 @@
   <!--  MODALS                                                             -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
 
+  <!-- Resume Session -->
+  <div class="modal-overlay" id="resume-modal">
+    <div class="modal-box">
+      <div class="modal-icon">⚡</div>
+      <div class="modal-title">Resume Session?</div>
+      <div class="resume-info-block">
+        <div class="resume-info-row">
+          <span class="resume-info-label">Banks</span>
+          <span class="resume-info-val" id="resume-banks">—</span>
+        </div>
+        <div class="resume-info-row">
+          <span class="resume-info-label">Progress</span>
+          <span class="resume-info-val" id="resume-progress">—</span>
+        </div>
+        <div class="resume-info-time" id="resume-time"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn ghost" id="fresh-btn">Start Fresh</button>
+        <button class="modal-btn primary" id="resume-btn">Resume →</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Quit -->
   <div class="modal-overlay" id="quit-modal">
     <div class="modal-box">
       <div class="modal-icon">🚪</div>
       <div class="modal-title">Quit this session?</div>
-      <div class="modal-desc">Your progress will be lost.</div>
+      <div class="modal-desc">Your progress is saved and can be resumed next time.</div>
       <div class="modal-actions">
         <button class="modal-btn ghost" id="quit-keep">Keep going</button>
         <button class="modal-btn danger" id="quit-confirm">Yes, quit</button>
@@ -507,7 +520,7 @@
     </div>
   </div>
 
-  <!-- Member remove bank (moves to vault) -->
+  <!-- Member remove bank -->
   <div class="modal-overlay" id="member-remove-modal">
     <div class="modal-box">
       <div class="modal-icon">🗂️</div>
@@ -525,7 +538,7 @@
     <button class="ctx-item" id="ctx-file-rename">✏️ Rename File</button>
     <button class="ctx-item" id="ctx-file-transfer">📂 Transfer to Folder</button>
     <button class="ctx-item ctx-danger" id="ctx-file-remove">🗑️ Remove</button>
-  </div>  
+  </div>
 
   <!-- Toast -->
   <div class="toast" id="toast"></div>
