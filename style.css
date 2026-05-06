@@ -136,26 +136,137 @@ body::before {
   position: fixed;
   inset: 0;
   z-index: 999;
-  background: var(--bg);
+  background: #0f0f13;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.6s ease;
+  overflow: hidden;
 }
 
-#page-splash.fade-out {
+.glow-orb {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124,106,247,0.35) 0%, transparent 70%);
+  filter: blur(20px);
   opacity: 0;
   pointer-events: none;
+  animation: glowFade 1.2s ease forwards 0.4s, glowOut 0.6s ease forwards 3.4s;
 }
 
-.splash-logo {
-  animation: splashIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+@keyframes glowFade { to { opacity: 1; } }
+@keyframes glowOut  { to { opacity: 0; } }
+
+.logo-wrap {
+  position: relative;
+  width: 100px;
+  height: 100px;
   opacity: 0;
+  transform: scale(0.88);
+  animation:
+    boxIn 0.7s cubic-bezier(0.34, 1.4, 0.64, 1) forwards 0.5s,
+    logoOut 0.5s ease forwards 3.4s;
 }
 
-.splash-logo svg {
+@keyframes boxIn { to { opacity: 1; transform: scale(1); } }
+@keyframes logoOut {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.82); }
+}
+
+.fade-out {
+  position: fixed;
+  inset: 0;
+  background: #0f0f13;
+  opacity: 0;
+  pointer-events: none;
+  animation: screenFade 0.6s ease forwards 3.5s;
+}
+
+@keyframes screenFade { to { opacity: 1; } }
+
+.shimmer-mask {
+  position: absolute;
+  inset: 0;
+  border-radius: 25px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.shimmer-mask::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 25%, rgba(255,255,255,0.18) 50%, transparent 75%);
+  transform: translateX(-100%);
+  filter: blur(4px);
+  animation: scan 1s ease forwards 1.05s;
+}
+
+@keyframes scan { to { transform: translateX(100%); filter: blur(0px); } }
+
+.ripple-ring {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid rgba(74,222,128,0.5);
+  opacity: 0;
+  pointer-events: none;
+  left: 75px;
+  top: 68px;
+  transform: translate(-50%, -50%) scale(0.5);
+  animation: ripple 0.65s ease-out forwards 2.22s;
+  z-index: 10;
+}
+
+@keyframes ripple {
+  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(2.4); opacity: 0; }
+}
+
+svg.logo-svg {
+  width: 100px;
+  height: 100px;
+  display: block;
   filter: drop-shadow(0 0 32px rgba(124, 106, 247, 0.5));
 }
+
+.bar1, .bar2, .bar3 {
+  opacity: 0;
+  transform: translateX(-16px);
+  filter: blur(6px);
+}
+
+.bar1 { animation: barIn1 0.6s ease forwards 1.1s; }
+.bar2 { animation: barIn2 0.6s ease forwards 1.3s; }
+.bar3 { animation: barIn3 0.6s ease forwards 1.5s; }
+
+@keyframes barIn1 { from { opacity: 0; transform: translateX(-16px); filter: blur(6px); } to { opacity: 1;    transform: translateX(0); filter: blur(0); } }
+@keyframes barIn2 { from { opacity: 0; transform: translateX(-16px); filter: blur(6px); } to { opacity: 0.6;  transform: translateX(0); filter: blur(0); } }
+@keyframes barIn3 { from { opacity: 0; transform: translateX(-16px); filter: blur(6px); } to { opacity: 0.35; transform: translateX(0); filter: blur(0); } }
+
+.check-grp {
+  transform-origin: 42px 38px;
+  transform: scale(0);
+  animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 2.0s;
+}
+
+@keyframes popIn {
+  0%   { transform: scale(0); }
+  70%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+.check-path {
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+  animation: drawMark 0.45s ease forwards 2.22s;
+}
+
+@keyframes drawMark { to { stroke-dashoffset: 0; } }
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1103,10 +1214,8 @@ body::before {
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   overflow: hidden;
-  /* Height collapses to 0 when hidden, avoiding layout shifts */
 }
 
-/* When visible, the bar has a fixed slim height */
 .timer-bar:not(.hidden) {
   min-height: 34px;
 }
@@ -1120,7 +1229,6 @@ body::before {
   justify-content: center;
 }
 
-/* When only one timer is active, let it span full width naturally */
 .timer-bar-item.hidden { display: none; }
 
 .timer-bar-sep {
@@ -1153,10 +1261,6 @@ body::before {
   min-width: 3.2ch;
   text-align: right;
 }
-
-/* Question timer urgency colours (applied via JS) */
-/* Session timer urgency colours (applied via JS) */
-
 
 .exam-body {
   flex: 1;
@@ -1658,7 +1762,7 @@ body::before {
   padding: 1.5rem;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.25s ease;
+  transition: opacity 0.12s ease;
 }
 
 .modal-overlay.open {
@@ -1675,7 +1779,7 @@ body::before {
   width: 100%;
   text-align: center;
   transform: translateY(12px);
-  transition: transform 0.25s ease;
+  transition: transform 0.12s ease;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
 }
 
@@ -1920,11 +2024,197 @@ body::before {
   transition: width 0.5s ease;
 }
 
-/* Mobile weak topics */
 @media (max-width: 768px) {
   .weak-topics-toggle { padding: 0.75rem 1rem; }
   .weak-topics-body   { padding: 0 1rem 0.85rem; }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LOADING OVERLAY
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+#loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 800;
+  background: rgba(15, 15, 19, 0.88);
+  backdrop-filter: blur(4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+#loading-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ── Logo wrapper ── */
+.lo-logo-wrap {
+  position: relative;
+  margin-bottom: 1.1rem;
+}
+
+/* Ambient glow — switches purple → green on complete */
+.lo-glow {
+  position: absolute;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: background 0.5s ease;
+  background: radial-gradient(circle, rgba(124, 106, 247, 0.22) 0%, transparent 70%);
+}
+
+#loading-overlay.lo-done .lo-glow {
+  background: radial-gradient(circle, rgba(74, 222, 128, 0.28) 0%, transparent 70%);
+}
+
+/* Square flash ring — appears once on completion */
+.lo-ring {
+  position: absolute;
+  width: 76px;
+  height: 76px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(74, 222, 128, 0);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.85);
+  pointer-events: none;
+  transition: none;
+}
+
+#loading-overlay.lo-done .lo-ring {
+  animation: loRingFlash 0.7s ease-out forwards;
+}
+
+@keyframes loRingFlash {
+  0%   { border-color: rgba(74,222,128,0.6); transform: translate(-50%,-50%) scale(1); }
+  60%  { border-color: rgba(74,222,128,0.3); transform: translate(-50%,-50%) scale(1.28); }
+  100% { border-color: rgba(74,222,128,0);   transform: translate(-50%,-50%) scale(1.42); }
+}
+
+/* ── SVG logo box background ── */
+.lo-logo-bg {
+  transition: fill 0.45s ease;
+  fill: #1e1e28;
+}
+
+#loading-overlay.lo-done .lo-logo-bg {
+  fill: #0b1f0f;
+}
+
+/* ── Bars — scan purple during load, return green on done ── */
+/* Each bar uses a CSS variable --delay for staggering */
+.lo-bar {
+  transform-box: fill-box;
+  transform-origin: left center;
+  fill: #7c6af7;
+}
+
+/* Loading scan animation — applied via JS class */
+.lo-bar-scan {
+  animation: loBarScan 1.6s ease-in-out infinite;
+}
+
+.lo-bar1.lo-bar-scan { animation-delay: 0s; }
+.lo-bar2.lo-bar-scan { animation-delay: 0.14s; }
+.lo-bar3.lo-bar-scan { animation-delay: 0.28s; }
+
+@keyframes loBarScan {
+  0%        { opacity: 0.2; transform: scaleX(0.88); filter: none; }
+  18%       { opacity: 1;   transform: scaleX(1.07); filter: drop-shadow(0 0 5px rgba(124,106,247,0.85)); }
+  40%       { opacity: 0.35; transform: scaleX(1); filter: none; }
+  70%       { opacity: 0.75; }
+  100%      { opacity: 0.2; transform: scaleX(0.88); }
+}
+
+/* Done state — bars return full, recolored green */
+#loading-overlay.lo-done .lo-bar {
+  animation: none !important;
+}
+
+#loading-overlay.lo-done .lo-bar1 {
+  fill: #4ade80;
+  opacity: 1;
+  transform: scaleX(1);
+  filter: drop-shadow(0 0 4px rgba(74,222,128,0.55));
+  transition: fill 0.3s ease 0.05s, opacity 0.3s ease 0.05s, filter 0.3s ease 0.05s;
+}
+
+#loading-overlay.lo-done .lo-bar2 {
+  fill: #4ade80;
+  opacity: 0.72;
+  transform: scaleX(1);
+  filter: drop-shadow(0 0 3px rgba(74,222,128,0.4));
+  transition: fill 0.3s ease 0.1s, opacity 0.3s ease 0.1s, filter 0.3s ease 0.1s;
+}
+
+#loading-overlay.lo-done .lo-bar3 {
+  fill: #4ade80;
+  opacity: 0.5;
+  transform: scaleX(1);
+  filter: drop-shadow(0 0 3px rgba(74,222,128,0.3));
+  transition: fill 0.3s ease 0.15s, opacity 0.3s ease 0.15s, filter 0.3s ease 0.15s;
+}
+
+/* ── Check badge ── */
+.lo-check-grp {
+  transform-origin: 42px 38px;
+  transform: scale(0);
+  opacity: 0;
+  transition: none;
+}
+
+#loading-overlay.lo-done .lo-check-grp {
+  animation: loCheckPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 0.15s;
+}
+
+@keyframes loCheckPop {
+  0%   { opacity: 0; transform: scale(0); }
+  60%  { opacity: 1; transform: scale(1.22); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* ── Status text — breathes during load, snaps green on done ── */
+.lo-status {
+  font-family: 'Sora', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  animation: loStatusBreathe 2s ease-in-out infinite;
+  transition: color 0.3s ease, opacity 0.3s ease;
+}
+
+@keyframes loStatusBreathe {
+  0%, 100% { opacity: 0.45; transform: translateY(1px); }
+  50%      { opacity: 1;    transform: translateY(0); }
+}
+
+#loading-overlay.lo-done .lo-status {
+  animation: none;
+  opacity: 1;
+  color: var(--correct);
+  transform: translateY(0);
+}
+
+/* ── Dismiss fade ── */
+#loading-overlay.lo-hiding {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MOBILE  (≤ 768px)
@@ -1938,13 +2228,11 @@ body::before {
     height: 100dvh;
   }
 
-  /* Landing layout: vertical stack */
   #page-landing {
     flex-direction: column;
     overflow: hidden;
   }
 
-  /* Topbar: horizontal, logo left + badge right */
   .logo-sidebar {
     width: 100%;
     height: 52px;
@@ -1961,11 +2249,9 @@ body::before {
   #role-badge-sidebar  { display: inline-flex; }
   #role-badge-desktop  { display: none !important; }
 
-  /* Banks column */
   .banks-col  { flex: 1; overflow: hidden; min-height: 0; }
   .banks-body { padding: 0.75rem; }
 
-  /* Panel header */
   .materials-header {
     flex-wrap: nowrap;
     gap: 0.4rem;
@@ -1975,7 +2261,6 @@ body::before {
   .materials-title { font-size: 0.65rem; }
   .search-input    { font-size: 0.72rem; }
 
-  /* Folder tabs */
   .folder-tabs-bar {
     flex-wrap: nowrap;
     overflow-x: auto;
@@ -1987,10 +2272,8 @@ body::before {
   .select-all-btn   { position: static; bottom: auto; }
   .vault-mode-btn   { font-size: 0.62rem; padding: 0.22rem 0.45rem; }
 
-  /* Hide desktop settings col */
   .settings-col { display: none; }
 
-  /* Mobile bottom strip */
   .mobile-bottom-strip {
     display: flex;
     align-items: center;
@@ -2042,10 +2325,8 @@ body::before {
 
   .err-msg { text-align: left; }
 
-  /* Exam */
   .exam-header { padding: 0.75rem 1rem; gap: 0.85rem; }
 
-  /* Timer bar on mobile: slightly more compact */
   .timer-bar:not(.hidden) { min-height: 30px; }
   .timer-bar-item         { padding: 0.25rem 1rem; }
   .timer-bar-label        { font-size: 0.62rem; }
@@ -2059,7 +2340,6 @@ body::before {
   .question-text { font-size: 1rem; }
   .choice-btn    { padding: 0.85rem 1rem; font-size: 0.88rem; }
 
-  /* Summary */
   #page-summary {
     padding: 0;
     overflow: hidden;
@@ -2097,7 +2377,6 @@ body::before {
     border-top: 1px solid var(--border);
   }
 
-  /* Modals */
   .modal-box { padding: 1.5rem 1.25rem; }
 
   .selected-tray { border-bottom: none; }

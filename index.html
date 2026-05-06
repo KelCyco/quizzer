@@ -15,14 +15,25 @@
   <!--  SPLASH                                                             -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <div id="page-splash">
-    <div class="splash-logo">
-      <svg width="100" height="100" viewBox="0 0 56 56" fill="none">
+    <div class="glow-orb"></div>
+    <div class="fade-out"></div>
+
+    <div class="logo-wrap">
+      <div class="shimmer-mask"></div>
+      <div class="ripple-ring"></div>
+
+      <svg class="logo-svg" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="56" height="56" rx="16" fill="#1e1e28"/>
-        <rect x="14" y="16" width="28" height="4" rx="2" fill="#7c6af7"/>
-        <rect x="14" y="26" width="20" height="4" rx="2" fill="#7c6af7" opacity="0.6"/>
-        <rect x="14" y="36" width="24" height="4" rx="2" fill="#7c6af7" opacity="0.35"/>
-        <circle cx="42" cy="38" r="7" fill="#4ade80"/>
-        <polyline points="38.5,38 41,40.5 45.5,35.5" stroke="#0f1f0f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <rect class="bar1" x="14" y="16" width="28" height="4" rx="2" fill="#7c6af7"/>
+        <rect class="bar2" x="14" y="26" width="20" height="4" rx="2" fill="#7c6af7" opacity="0.6"/>
+        <rect class="bar3" x="14" y="36" width="24" height="4" rx="2" fill="#7c6af7" opacity="0.35"/>
+        <g class="check-grp">
+          <circle cx="42" cy="38" r="7" fill="#4ade80"/>
+          <polyline class="check-path"
+            points="38.5,38 41,40.5 45.5,35.5"
+            stroke="#0f1f0f" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </g>
       </svg>
     </div>
   </div>
@@ -538,6 +549,29 @@
     <button class="ctx-item" id="ctx-file-rename">✏️ Rename File</button>
     <button class="ctx-item" id="ctx-file-transfer">📂 Transfer to Folder</button>
     <button class="ctx-item ctx-danger" id="ctx-file-remove">🗑️ Remove</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!--  LOADING OVERLAY                                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="loading-overlay">
+    <div class="lo-logo-wrap">
+      <div class="lo-glow"></div>
+      <div class="lo-ring"></div>
+      <svg width="68" height="68" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect class="lo-logo-bg" width="56" height="56" rx="16"/>
+        <rect class="lo-bar lo-bar1" x="14" y="16" width="28" height="4" rx="2"/>
+        <rect class="lo-bar lo-bar2" x="14" y="26" width="20" height="4" rx="2"/>
+        <rect class="lo-bar lo-bar3" x="14" y="36" width="24" height="4" rx="2"/>
+        <g class="lo-check-grp">
+          <circle cx="42" cy="38" r="9" fill="#4ade80"/>
+          <polyline points="38.5,38 41,40.5 45.5,35.5"
+            stroke="#0f1f0f" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </g>
+      </svg>
+    </div>
+    <div class="lo-status" id="lo-status">Loading…</div>
   </div>
 
   <!-- Toast -->

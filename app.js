@@ -29,6 +29,94 @@ document.addEventListener('keydown',e=>{
 
 window.addEventListener('beforeprint',e=>e.preventDefault());
 
+
+// ══════════════════════════════════════════════════════════════
+//  LOADING OVERLAY
+// ══════════════════════════════════════════════════════════════
+
+let _loaderDepth = 0;       // supports nested calls — overlay stays until all done
+let _loaderDoneTimer = null;
+
+/**
+ * Show the loading overlay with a status message.
+ * Returns a unique handle. Always pair with hideLoader(handle).
+ *
+ * Usage:
+ *   const h = showLoader('Syncing banks…');
+ *   try { ... } finally { await hideLoader(h); }
+ */
+function showLoader(msg = 'Loading…') {
+  _loaderDepth++;
+  const overlay = $('loading-overlay');
+  const statusEl = $('lo-status');
+
+  // Cancel any in-progress dismiss
+  if (_loaderDoneTimer) { clearTimeout(_loaderDoneTimer); _loaderDoneTimer = null; }
+
+  // Reset to loading state
+  overlay.classList.remove('lo-done', 'lo-hiding');
+
+  // Start bar scan animation
+  overlay.querySelectorAll('.lo-bar').forEach(b => b.classList.add('lo-bar-scan'));
+
+  statusEl.textContent = msg;
+  overlay.classList.add('active');
+
+  return Symbol('loader'); // unique handle (unused structurally but good practice)
+}
+
+/**
+ * Update the status text while a loader is already showing.
+ */
+function updateLoader(msg) {
+  const el = $('lo-status');
+  if (el) el.textContent = msg;
+}
+
+/**
+ * Dismiss the loading overlay.
+ * Plays the done animation (bars go green + check pops), then fades out.
+ */
+function hideLoader() {
+  _loaderDepth = Math.max(0, _loaderDepth - 1);
+  if (_loaderDepth > 0) return; // other callers still waiting
+
+  const overlay = $('loading-overlay');
+
+  // Stop scan, trigger done state
+  overlay.querySelectorAll('.lo-bar').forEach(b => b.classList.remove('lo-bar-scan'));
+  overlay.classList.add('lo-done');
+
+  // Hold the done state briefly so user can see it, then fade out
+  _loaderDoneTimer = setTimeout(() => {
+    overlay.classList.add('lo-hiding');
+    setTimeout(() => {
+      overlay.classList.remove('active', 'lo-done', 'lo-hiding');
+      // Re-arm bars for next time
+      overlay.querySelectorAll('.lo-bar').forEach(b => b.classList.remove('lo-bar-scan'));
+    }, 420);
+    _loaderDoneTimer = null;
+  }, 700); // 700ms to enjoy the green check
+}
+
+/**
+ * Convenience wrapper: shows loader, runs async fn, always hides.
+ * Usage: await withLoader('Deleting…', () => gasPost(...))
+ */
+async function withLoader(msg, fn) {
+  showLoader(msg);
+  try {
+    return await fn();
+  } finally {
+    hideLoader();
+  }
+}
+
+
+// ══════════════════════════════════════════════════════════════
+//  DOM READY
+// ══════════════════════════════════════════════════════════════
+
 window.addEventListener('DOMContentLoaded',()=>{
   $('refresh-btn').addEventListener('click',()=>loadAllFolders());
   $('add-bank-btn').addEventListener('click',()=>$('file-input').click());
@@ -88,7 +176,6 @@ window.addEventListener('DOMContentLoaded',()=>{
   $('ctx-file-transfer').addEventListener('click',()=>{hideFileCtxMenu();openTransferFileModal();});
   $('ctx-file-remove').addEventListener('click',()=>{hideFileCtxMenu();openRemoveFileModal();});
 
-  // Resume modal buttons
   $('resume-btn').addEventListener('click',resumeSavedSession);
   $('fresh-btn').addEventListener('click',()=>{
     clearSavedSession();
@@ -105,90 +192,113 @@ window.addEventListener('DOMContentLoaded',()=>{
   document.addEventListener('click',hideCtxMenu);
   document.addEventListener('keydown',e=>{if(e.key==='Escape')hideCtxMenu();});
 
-  // Splash then password gate
   setTimeout(()=>{
     $('page-splash').classList.add('fade-out');
     setTimeout(()=>{
       $('page-splash').classList.add('hidden');
       showPasswordGate();
     },600);
-  },1800);
+  },4200);
 });
+
+
+// ══════════════════════════════════════════════════════════════
+//  INDEXEDDB HELPERS
+// ══════════════════════════════════════════════════════════════
+
+const IDB_NAME  = 'quizzer_db';
+const IDB_STORE = 'kv';
+
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(IDB_NAME,1);
+    req.onupgradeneeded=e=>{e.target.result.createObjectStore(IDB_STORE);};
+    req.onsuccess=e=>resolve(e.target.result);
+    req.onerror  =e=>reject(e.target.error);
+  });
+}
+
+async function idbSet(key,value){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).put(value,key);
+    tx.oncomplete=()=>resolve();
+    tx.onerror   =e=>reject(e.target.error);
+  });
+}
+
+async function idbGet(key){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,'readonly');
+    const req=tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess=e=>resolve(e.target.result??null);
+    req.onerror  =e=>reject(e.target.error);
+  });
+}
+
+async function idbDelete(key){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).delete(key);
+    tx.oncomplete=()=>resolve();
+    tx.onerror   =e=>reject(e.target.error);
+  });
+}
+
 
 // ══════════════════════════════════════════════════════════════
 //  SESSION PERSISTENCE
 // ══════════════════════════════════════════════════════════════
 
+function buildSessionPayload(){
+  return{
+    sessionQuestions,
+    sourceQuestions:window._sessionSource||sessionQuestions.slice(0,totalUniqueQuestions),
+    questionTimeLeft,sessionTimeLeft,currentIdx,correctCount,wrongCount,
+    totalUniqueQuestions,retryCounts,sessionResults,
+    settings:{
+      mastery:$('toggle-mastery').checked,shuffle:$('toggle-shuffle').checked,
+      auto:$('toggle-auto').checked,limit:$('select-limit').value,
+      qtimer:$('select-qtimer').value,stimer:$('select-stimer').value,
+    },
+    selectedBankIds:Array.from(selectedIds),
+    selectedBankNames:[...allBanks.filter(b=>selectedIds.has(b.id)).map(b=>b.name)],
+    savedAt:Date.now(),
+  };
+}
+
 function saveSession(){
   try{
-    const payload={
-      // Question state
-      sessionQuestions,
-      currentIdx,
-      correctCount,
-      wrongCount,
-      totalUniqueQuestions,
-      retryCounts,
-      sessionResults,
-      // Settings snapshot (so resume uses same settings)
-      settings:{
-        mastery:$('toggle-mastery').checked,
-        shuffle:$('toggle-shuffle').checked,
-        auto:$('toggle-auto').checked,
-        limit:$('select-limit').value,
-        qtimer:$('select-qtimer').value,
-        stimer:$('select-stimer').value,
-      },
-      // Which banks were selected (for validation on resume)
-      selectedBankIds:Array.from(selectedIds),
-      selectedBankNames:[...allBanks.filter(b=>selectedIds.has(b.id)).map(b=>b.name)],
-      savedAt:Date.now(),
-    };
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(payload));
-  }catch(e){
-    // localStorage full or unavailable — fail silently
-    console.warn('Could not save session:', e);
-  }
+    const payload=buildSessionPayload();
+    try{localStorage.setItem(SESSION_STORAGE_KEY,JSON.stringify(payload));}catch(e){console.warn('localStorage save failed:',e);}
+    idbSet(SESSION_STORAGE_KEY,payload).catch(e=>console.warn('IDB save failed:',e));
+  }catch(e){console.warn('Could not build session payload:',e);}
+}
+
+async function loadSavedSession(){
+  try{const raw=localStorage.getItem(SESSION_STORAGE_KEY);if(raw)return JSON.parse(raw);}
+  catch(e){try{localStorage.removeItem(SESSION_STORAGE_KEY);}catch(_){}}
+  try{const val=await idbGet(SESSION_STORAGE_KEY);return val||null;}
+  catch(e){return null;}
 }
 
 function clearSavedSession(){
-  try{ localStorage.removeItem(SESSION_STORAGE_KEY); }catch(_){}
+  try{localStorage.removeItem(SESSION_STORAGE_KEY);}catch(_){}
+  idbDelete(SESSION_STORAGE_KEY).catch(()=>{});
 }
 
-function loadSavedSession(){
-  try{
-    const raw=localStorage.getItem(SESSION_STORAGE_KEY);
-    if(!raw)return null;
-    return JSON.parse(raw);
-  }catch(e){
-    clearSavedSession();
-    return null;
-  }
-}
-
-/**
- * Called after folders load. Checks if a saved session exists and if
- * the banks it referenced are still present in Drive.
- * If valid → shows the resume modal.
- * If invalid → silently discards.
- */
-function checkForSavedSession(){
-  const saved=loadSavedSession();
+async function checkForSavedSession(){
+  const saved=await loadSavedSession();
   if(!saved)return;
-
-  // Validate: every selectedBankId must still exist in allBanks
   const availableIds=new Set(allBanks.map(b=>b.id));
   const allPresent=saved.selectedBankIds.every(id=>availableIds.has(id));
-  if(!allPresent){
-    clearSavedSession();
-    return;
-  }
-
-  // Build info for the modal
+  if(!allPresent){clearSavedSession();return;}
   const isMastery=!!(saved.settings&&saved.settings.mastery);
   const total=saved.totalUniqueQuestions;
   const bankNames=saved.selectedBankNames||saved.selectedBankIds;
-
   let progressText;
   if(isMastery){
     const mastered=saved.correctCount||0;
@@ -199,14 +309,9 @@ function checkForSavedSession(){
     const pct=total>0?Math.round((answered/total)*100):0;
     progressText=answered+' / '+total+' answered ('+pct+'%)';
   }
-
   $('resume-banks').textContent=bankNames.join(', ');
   $('resume-progress').textContent=progressText;
-
-  // Show saved date
-  const ago=formatTimeAgo(saved.savedAt);
-  $('resume-time').textContent=`Last active ${ago}`;
-
+  $('resume-time').textContent=`Last active ${formatTimeAgo(saved.savedAt)}`;
   $('resume-modal').classList.add('open');
 }
 
@@ -220,23 +325,14 @@ function formatTimeAgo(ts){
   return `${Math.floor(hrs/24)}d ago`;
 }
 
-function resumeSavedSession(){
-  const saved=loadSavedSession();
+async function resumeSavedSession(){
+  const saved=await loadSavedSession();
   if(!saved){$('resume-modal').classList.remove('open');return;}
-
-  // Restore selection so the UI reflects what was active
   selectedIds=new Set(saved.selectedBankIds);
-
-  // Restore session state
   sessionQuestions=saved.sessionQuestions;
-  currentIdx=saved.currentIdx;
-  correctCount=saved.correctCount;
-  wrongCount=saved.wrongCount;
-  totalUniqueQuestions=saved.totalUniqueQuestions;
-  retryCounts=saved.retryCounts||{};
-  sessionResults=saved.sessionResults||[];
-
-  // Restore settings toggles
+  window._sessionSource=saved.sourceQuestions||saved.sessionQuestions.slice(0,saved.totalUniqueQuestions);
+  currentIdx=saved.currentIdx;correctCount=saved.correctCount;wrongCount=saved.wrongCount;
+  totalUniqueQuestions=saved.totalUniqueQuestions;retryCounts=saved.retryCounts||{};sessionResults=saved.sessionResults||[];
   const s=saved.settings||{};
   if(s.mastery!==undefined)  $('toggle-mastery').checked=s.mastery;
   if(s.shuffle!==undefined)  $('toggle-shuffle').checked=s.shuffle;
@@ -244,25 +340,27 @@ function resumeSavedSession(){
   if(s.limit!==undefined)    $('select-limit').value=s.limit;
   if(s.qtimer!==undefined)   $('select-qtimer').value=s.qtimer;
   if(s.stimer!==undefined)   $('select-stimer').value=s.stimer;
-  // Sync mobile toggles too
   if(s.mastery!==undefined)  $('mob-toggle-mastery').checked=s.mastery;
   if(s.shuffle!==undefined)  $('mob-toggle-shuffle').checked=s.shuffle;
   if(s.auto!==undefined)     $('mob-toggle-auto').checked=s.auto;
   if(s.limit!==undefined)    $('mob-select-limit').value=s.limit;
   if(s.qtimer!==undefined)   $('mob-select-qtimer').value=s.qtimer;
   if(s.stimer!==undefined)   $('mob-select-stimer').value=s.stimer;
-
   $('resume-modal').classList.remove('open');
   stopQuestionTimer();stopSessionTimer();
   showPage('page-exam');
-  startSessionTimer();
-  renderQuestion();
-
-  // Update landing UI to reflect re-selected banks
-  updateTray();
-  updateStartBtn();
-  renderCurrentTab();
+  const savedSessionTime=saved.sessionTimeLeft||0;
+  if(savedSessionTime>0){
+    sessionTimeLeft=savedSessionTime;updateSessionTimerDisplay();
+    $('session-timer-wrap').classList.remove('hidden');syncTimerBar();
+    sessionTimerInterval=setInterval(()=>{
+      sessionTimeLeft--;updateSessionTimerDisplay();saveSession();
+      if(sessionTimeLeft<=0){stopSessionTimer();clearSavedSession();showSummary();}
+    },1000);
+  }else{startSessionTimer();}
+  renderQuestion();updateTray();updateStartBtn();renderCurrentTab();
 }
+
 
 // ══════════════════════════════════════════════════════════════
 //  ROLE / AUTH
@@ -305,26 +403,40 @@ async function submitPassword(){
   const val=$('password-input').value.trim();if(!val)return;
   $('password-submit').textContent='Checking…';$('password-submit').disabled=true;
   try{
+    // Verify password — show loader for this network call
+    showLoader('Verifying…');
     const data=await gasGet({action:'verify',code:val});
     if(data.ok){
+      hideLoader();
       $('password-modal').classList.remove('open');
       applyRole(data.role||'member');
       $('page-landing').classList.remove('hidden');
-      if(GAS_READY){$('config-banner').classList.add('hidden');await loadAllFolders();checkForSavedSession();}
-      else $('config-banner').classList.remove('hidden');
+      if(GAS_READY){
+        $('config-banner').classList.add('hidden');
+        await loadAllFolders();
+        await checkForSavedSession();
+      }else{
+        $('config-banner').classList.remove('hidden');
+      }
     }else{
+      hideLoader();
       const inp=$('password-input');
       inp.classList.remove('shake');void inp.offsetWidth;inp.classList.add('shake');
       $('password-err').textContent='Incorrect password. Try again.';inp.value='';
       setTimeout(()=>inp.classList.remove('shake'),400);
     }
-  }catch{$('password-err').textContent='Network error. Try again.';}
-  finally{$('password-submit').textContent='Unlock →';$('password-submit').disabled=false;}
+  }catch{
+    hideLoader();
+    $('password-err').textContent='Network error. Try again.';
+  }finally{
+    $('password-submit').textContent='Unlock →';$('password-submit').disabled=false;
+  }
 }
 
 async function loadAllFolders(){
   if(!GAS_READY)return;
   const btn=$('refresh-btn');btn.classList.add('spinning');
+  showLoader('Syncing banks…');
   try{
     const pubData=await gasGet({action:'list',drive:'public',role:currentRole||'member'});
     if(!pubData.error){
@@ -332,6 +444,7 @@ async function loadAllFolders(){
       publicFolders=(pubData.folders||[]).map(f=>({...f,banks:f.banks.map(b=>({...b,questions:ex[b.id]||null}))}));
     }
     if(currentRole==='admin'){
+      updateLoader('Syncing vault…');
       const privData=await gasGet({action:'list',drive:'private',role:'admin'});
       if(!privData.error){
         const ex={};privateFolders.flatMap(f=>f.banks).forEach(b=>{if(b.questions)ex[b.id]=b.questions;});
@@ -345,7 +458,7 @@ async function loadAllFolders(){
     else{activeTabId=null;showInitialPane();}
     updateSelectAllBtn();refreshPublishFolderSelect();
   }catch{showErr('Network error. Check your GAS URL.');}
-  finally{btn.classList.remove('spinning');}
+  finally{btn.classList.remove('spinning');hideLoader();}
 }
 
 function renderTabs(){
@@ -431,16 +544,14 @@ function appendBankItem(container,bank){
     if(ub)ub.addEventListener('click',e=>{e.stopPropagation();promptUnpublish(bank.id,bank.name);});
     if(db)db.addEventListener('click',e=>{e.stopPropagation();promptDeleteBank(bank.id,bank.name);});
   }
-  if(!isPriv){
+  if(!isPriv||(isPriv&&isAdmin)){
     item.addEventListener('contextmenu',e=>{
-      e.preventDefault();
-      showFileCtxMenu(e.clientX,e.clientY,bank.id,bank.name);
+      e.preventDefault();showFileCtxMenu(e.clientX,e.clientY,bank.id,bank.name,isPriv);
     });
     let pressTimer=null;
     item.addEventListener('touchstart',e=>{
       pressTimer=setTimeout(()=>{
-        const touch=e.touches[0];
-        showFileCtxMenu(touch.clientX,touch.clientY,bank.id,bank.name);
+        const touch=e.touches[0];showFileCtxMenu(touch.clientX,touch.clientY,bank.id,bank.name,isPriv);
       },600);
     },{passive:true});
     item.addEventListener('touchend',()=>{clearTimeout(pressTimer);pressTimer=null;});
@@ -512,40 +623,43 @@ function refreshPublishFolderSelect(){
 }
 
 function promptPublish(id,name){pendingPublishId=id;$('publish-modal-desc').textContent=`Where should "${name}" go in the public Drive?`;$('publish-modal').classList.add('open');}
+
 async function doPublishBank(){
   if(!pendingPublishId)return;
   const fid=$('publish-folder-select').value||'';
-  $('publish-confirm-btn').textContent='Publishing…';$('publish-confirm-btn').disabled=true;
+  $('publish-modal').classList.remove('open');
   try{
-    const data=await gasPost({action:'publish'},{fileId:pendingPublishId,targetFolderId:fid,role:currentRole});
+    const data=await withLoader('Publishing bank…',()=>gasPost({action:'publish'},{fileId:pendingPublishId,targetFolderId:fid,role:currentRole}));
     if(data.error)showErr('Publish failed: '+data.error);
     else{showToast('🌐 Bank published!',2800,'success');await loadAllFolders();}
   }catch{showErr('Network error.');}
-  finally{$('publish-confirm-btn').textContent='Publish →';$('publish-confirm-btn').disabled=false;$('publish-modal').classList.remove('open');pendingPublishId=null;}
+  finally{pendingPublishId=null;}
 }
 
 function promptUnpublish(id,name){pendingUnpublishId=id;$('unpublish-modal-desc').textContent=`"${name}" will move back to the Vault archive.`;$('unpublish-modal').classList.add('open');}
+
 async function doUnpublishBank(){
   if(!pendingUnpublishId)return;
-  $('unpublish-confirm-btn').textContent='Moving…';$('unpublish-confirm-btn').disabled=true;
+  $('unpublish-modal').classList.remove('open');
   try{
-    const data=await gasPost({action:'unpublish'},{fileId:pendingUnpublishId,role:currentRole});
+    const data=await withLoader('Moving to vault…',()=>gasPost({action:'unpublish'},{fileId:pendingUnpublishId,role:currentRole}));
     if(data.error)showErr('Unpublish failed: '+data.error);
     else{showToast('📥 Moved to Vault archive',2800,'success');selectedIds.delete(pendingUnpublishId);await loadAllFolders();updateTray();updateStartBtn();}
   }catch{showErr('Network error.');}
-  finally{$('unpublish-confirm-btn').textContent='Move to Vault →';$('unpublish-confirm-btn').disabled=false;$('unpublish-modal').classList.remove('open');pendingUnpublishId=null;}
+  finally{pendingUnpublishId=null;}
 }
 
 function promptDeleteBank(id,name){pendingDeleteId=id;$('delete-bank-desc').textContent=`"${name}" will be permanently removed.`;$('delete-bank-modal').classList.add('open');}
+
 async function doDeleteBank(){
   if(!pendingDeleteId)return;
-  $('delete-confirm-btn').textContent='Deleting…';$('delete-confirm-btn').disabled=true;
+  $('delete-bank-modal').classList.remove('open');
   try{
-    const data=await gasPost({action:'delete'},{fileId:pendingDeleteId,role:currentRole});
+    const data=await withLoader('Deleting bank…',()=>gasPost({action:'delete'},{fileId:pendingDeleteId,role:currentRole}));
     if(data.error)showErr('Delete failed: '+data.error);
     else{showToast('🗑 Bank deleted',2800,'success');selectedIds.delete(pendingDeleteId);await loadAllFolders();updateTray();updateStartBtn();}
   }catch{showErr('Network error.');}
-  finally{$('delete-confirm-btn').textContent='Yes, delete';$('delete-confirm-btn').disabled=false;$('delete-bank-modal').classList.remove('open');pendingDeleteId=null;}
+  finally{pendingDeleteId=null;}
 }
 
 function handleFiles(fileList){
@@ -555,21 +669,28 @@ function handleFiles(fileList){
   if(!files.length){showErr('Upload .xlsx, .xls, or .csv files only.');return;}
   const targetFolderId=(activeTabId&&activeTabId!=='_all')?activeTabId:'';
   const targetDrive=vaultMode;
-  files.forEach(file=>{
-    const reader=new FileReader();
-    reader.onload=async e=>{
-      try{
-        showToast(`⏳ Uploading "${file.name}"…`,15000);
-        const b64=btoa(String.fromCharCode(...new Uint8Array(e.target.result)));
-        const mime=file.name.endsWith('.csv')?'text/csv':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-        const data=await gasPost({action:'upload'},{fileName:file.name,data:b64,mimeType:mime,folderId:targetFolderId,drive:targetDrive,role:currentRole});
-        if(data.error){showErr('Upload failed: '+data.error);return;}
-        showToast(`✓ "${file.name}" uploaded`,2800,'success');
-        await loadAllFolders();
-      }catch(err){showErr('Upload error: '+err.message);}
-    };
-    reader.readAsArrayBuffer(file);
-  });
+
+  // Upload files sequentially so loader messages are clear
+  (async()=>{
+    for(const file of files){
+      const reader=new FileReader();
+      await new Promise((resolve)=>{
+        reader.onload=async e=>{
+          try{
+            showLoader(`Uploading "${file.name}"…`);
+            const b64=btoa(String.fromCharCode(...new Uint8Array(e.target.result)));
+            const mime=file.name.endsWith('.csv')?'text/csv':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+            const data=await gasPost({action:'upload'},{fileName:file.name,data:b64,mimeType:mime,folderId:targetFolderId,drive:targetDrive,role:currentRole});
+            if(data.error){hideLoader();showErr('Upload failed: '+data.error);}
+            else{hideLoader();showToast(`✓ "${file.name}" uploaded`,2800,'success');}
+          }catch(err){hideLoader();showErr('Upload error: '+err.message);}
+          resolve();
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+    await loadAllFolders();
+  })();
 }
 
 async function gasGet(params){const url=new URL(GAS_URL);Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v));return(await fetch(url.toString())).json();}
@@ -618,20 +739,24 @@ function shuffleChoices(q){const ct=q.choices.find(c=>c.letter===q.answer)?.text
 
 async function startQuiz(){
   const sel=allBanks.filter(b=>selectedIds.has(b.id));if(!sel.length){showErr('Select at least one bank.');return;}
-  $('start-btn').textContent='Loading…';$('start-btn').disabled=true;$('mobile-start-btn').textContent='Loading…';$('mobile-start-btn').disabled=true;
+  $('start-btn').disabled=true;$('mobile-start-btn').disabled=true;
   try{
     for(const bank of sel){
       if(!bank.questions){
-        showToast(`⏳ Loading "${bank.name}"…`,60000);
+        showLoader(`Loading "${bank.name}"…`);
         bank.questions=await fetchBankQuestions(bank);
+        hideLoader();
         const mc=document.querySelector(`.bank-item[data-id="${bank.id}"] .bank-meta`);
         if(mc)mc.textContent=bank.questions.length+' questions · Added '+bank.addedAt;
-        showToast(`✓ "${bank.name}" loaded!`,1500,'success');
       }
     }
-  }catch(err){showErr('Could not load bank: '+err.message);$('start-btn').textContent='Start Session →';$('start-btn').disabled=false;$('mobile-start-btn').textContent='Start Session →';$('mobile-start-btn').disabled=false;return;}
-  $('start-btn').textContent='Start Session →';$('start-btn').disabled=false;$('mobile-start-btn').textContent='Start Session →';$('mobile-start-btn').disabled=false;
-  // Clear any old save before starting fresh
+  }catch(err){
+    hideLoader();
+    showErr('Could not load bank: '+err.message);
+    $('start-btn').disabled=false;$('mobile-start-btn').disabled=false;
+    return;
+  }
+  $('start-btn').disabled=false;$('mobile-start-btn').disabled=false;
   clearSavedSession();
   _beginSession(sel.flatMap(b=>b.questions.map(q=>({...q,_bank:b.name}))));
 }
@@ -650,13 +775,11 @@ function _beginSession(source){
   if(lim>0)qs=qs.slice(0,lim);
   qs=qs.map(q=>shuffleChoices(q));
   totalUniqueQuestions=qs.length;
-  sessionQuestions=qs;
+  sessionQuestions=qs;window._sessionSource=qs.slice();
   currentIdx=0;correctCount=0;wrongCount=0;
   sessionResults=[];wrongPool=[];retryCounts={};
   stopQuestionTimer();stopSessionTimer();
-  showPage('page-exam');
-  startSessionTimer();
-  renderQuestion();
+  showPage('page-exam');startSessionTimer();renderQuestion();
 }
 
 function renderQuestion(){
@@ -665,12 +788,10 @@ function renderQuestion(){
   const pct=mastery?Math.round((correctCount/totalUniqueQuestions)*100):Math.round((currentIdx/sessionQuestions.length)*100);
   $('prog-cur').textContent=cur;$('prog-total').textContent=tot;$('prog-pct').textContent=pct+'%';$('prog-fill').style.width=pct+'%';
   $('hdr-c').textContent=correctCount+' ✓';$('hdr-w').textContent=wrongCount+' ✗';$('score-chips').style.display=mastery?'none':'flex';
-
   const card=$('question-card');card.innerHTML='';card.style.animation='none';void card.offsetWidth;card.style.animation='';
   const meta=document.createElement('div');meta.className='question-meta';
   meta.innerHTML=`<span>Question ${cur} of ${tot}</span><span class="q-type-badge">${q.type}</span>${mastery?'<span class="mastery-badge">⚡ Mastery</span>':''}${q._bank?`<span class="q-bank-badge">📋 ${escHtml(q._bank)}</span>`:''}`;
   card.appendChild(meta);
-
   const qt=document.createElement('div');qt.className='question-text';qt.textContent=q.question;card.appendChild(qt);
   const ce=document.createElement('div');ce.className='choices';
   q.choices.forEach(c=>{const btn=document.createElement('button');btn.className='choice-btn';btn.innerHTML=`<div class="choice-letter">${c.letter}</div><div class="choice-text">${escHtml(c.text)}</div>`;btn.addEventListener('click',()=>submitAnswer(c.letter,btn,q,card));ce.appendChild(btn);});
@@ -681,11 +802,9 @@ function renderQuestion(){
 function clearAutoAdvance(){if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}}
 
 function submitAnswer(sel,btnEl,q,card){
-  clearAutoAdvance();
-  stopQuestionTimer();
+  clearAutoAdvance();stopQuestionTimer();
   const ok=sel===q.answer,autoOn=$('toggle-auto').checked,mastery=$('toggle-mastery').checked;
   card.querySelectorAll('.choice-btn').forEach(b=>{b.disabled=true;if(b.querySelector('.choice-letter').textContent===q.answer)b.classList.add('correct');});
-
   if(!ok)btnEl.classList.add('wrong');
   if(ok)correctCount++;else{wrongCount++;wrongPool.push(q);if(mastery)retryCounts[q.question]=(retryCounts[q.question]||0)+1;}
   sessionResults.push({q,selected:sel,isCorrect:ok});
@@ -693,12 +812,7 @@ function submitAnswer(sel,btnEl,q,card){
   const fb=document.createElement('div');fb.className='answer-feedback '+(ok?'correct':'wrong');fb.textContent=ok?'✓ Correct':'✗ Incorrect';card.appendChild(fb);
   if(q.explanation&&!autoOn){const rv=document.createElement('div');rv.className='answer-reveal '+(ok?'reveal-correct':'reveal-wrong');rv.innerHTML=`<div class="reveal-body"><span style="font-size:.7rem;font-weight:600;font-family:'Sora',sans-serif;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;">Explanation</span><span class="exp-text"></span></div>`;rv.querySelector('.exp-text').textContent=q.explanation;card.appendChild(rv);}
   if(mastery&&!ok)sessionQuestions.push(shuffleChoices(q));
-
-  // ── Save session state after every answer ──
-  currentIdx++;
-  saveSession();
-  currentIdx--; // revert — advance happens in the advance() closure below
-
+  currentIdx++;saveSession();currentIdx--;
   const last=currentIdx+1>=sessionQuestions.length;
   const advance=()=>{currentIdx++;last?(clearSavedSession(),showSummary()):renderQuestion();};
   if(autoOn){
@@ -707,11 +821,9 @@ function submitAnswer(sel,btnEl,q,card){
     requestAnimationFrame(()=>{bf.style.transition=`width ${secs}s linear`;bf.style.width='0%';});
     autoTimer=setTimeout(advance,secs*1000);
   }else{
-    const nb=document.createElement('button');
-    nb.className='next-btn show';
+    const nb=document.createElement('button');nb.className='next-btn show';
     nb.textContent=last?'See Results →':'Next Question →';
-    nb.addEventListener('click',advance);
-    card.appendChild(nb);
+    nb.addEventListener('click',advance);card.appendChild(nb);
   }
 }
 
@@ -719,17 +831,32 @@ function showSummary(){
   stopQuestionTimer();stopSessionTimer();
   showPage('page-summary');
   const mastery=$('toggle-mastery').checked,total=totalUniqueQuestions,attempts=sessionResults.length;
-  const ftc=sessionResults.filter((r,i)=>{if(!r.isCorrect)return false;return sessionResults.slice(0,i).filter(x=>x.q.question===r.q.question).length===0;}).length;
-  const ftPct=total>0?Math.round((ftc/total)*100):0,retries=attempts-total;
-  const pct=mastery?ftPct:(total>0?Math.round((correctCount/total)*100):0);
+  const firstAttemptMap=new Map();
+  sessionResults.forEach(r=>{if(!firstAttemptMap.has(r.q.question))firstAttemptMap.set(r.q.question,r);});
+  const firstAttempts=[...firstAttemptMap.values()];
+  const ftCorrect=firstAttempts.filter(r=>r.isCorrect).length;
+  const ftWrong=firstAttempts.filter(r=>!r.isCorrect).length;
+  const ftPct=total>0?Math.round((ftCorrect/total)*100):0;
+  const retries=attempts-total;
+  const pct=ftPct;
   const c=2*Math.PI*45,ring=$('score-ring');ring.style.strokeDasharray=c;ring.style.strokeDashoffset=c;
   setTimeout(()=>{ring.style.strokeDashoffset=c-(pct/100)*c;ring.style.stroke=pct>=80?'#4ade80':pct>=60?'#7c6af7':'#f87171';},100);
   $('sum-pct').textContent=pct+'%';$('score-ring-label-text').textContent=mastery?'1st Try':'Score';
-  if(mastery){$('sum-title').textContent='🏆 All Mastered!';$('sum-sub').textContent=`${total} questions mastered in ${attempts} attempts`;$('sum-correct').textContent=total;$('label-correct').textContent='Mastered';$('sum-wrong').textContent=retries;$('label-wrong').textContent='Retries';$('sum-total').textContent=ftPct+'%';$('label-total').textContent='Accuracy';}
-  else{$('sum-title').textContent=pct===100?'Perfect score!':pct>=80?'Great work!':pct>=60?'Good effort':'Keep practicing';$('sum-sub').textContent=`${correctCount} of ${total} correct`;$('sum-correct').textContent=correctCount;$('label-correct').textContent='Correct';$('sum-wrong').textContent=wrongCount;$('label-wrong').textContent='Incorrect';$('sum-total').textContent=total;$('label-total').textContent='Total';}
+  if(mastery){
+    $('sum-title').textContent='🏆 All Mastered!';
+    $('sum-sub').textContent=`${total} questions mastered in ${attempts} attempts`;
+    $('sum-correct').textContent=total;$('label-correct').textContent='Mastered';
+    $('sum-wrong').textContent=retries;$('label-wrong').textContent='Retries';
+    $('sum-total').textContent=ftPct+'%';$('label-total').textContent='Accuracy';
+  }else{
+    $('sum-title').textContent=pct===100?'Perfect score!':pct>=80?'Great work!':pct>=60?'Good effort':'Keep practicing';
+    $('sum-sub').textContent=`${ftCorrect} of ${total} correct`;
+    $('sum-correct').textContent=ftCorrect;$('label-correct').textContent='Correct';
+    $('sum-wrong').textContent=ftWrong;$('label-wrong').textContent='Incorrect';
+    $('sum-total').textContent=total;$('label-total').textContent='Total';
+  }
   buildWeakTopics();
-  const weakToggle=$('weak-topics-toggle');
-  const weakBody=$('weak-topics-body');
+  const weakToggle=$('weak-topics-toggle'),weakBody=$('weak-topics-body');
   weakToggle.onclick=()=>{
     const open=weakToggle.classList.toggle('open');
     weakBody.style.display=open?'block':'none';
@@ -749,21 +876,21 @@ function showSummary(){
   });
 }
 
-function retakeSession(){
-  clearAutoAdvance();
-  clearSavedSession();
-  _beginSession(allBanks.filter(b=>selectedIds.has(b.id)).flatMap(b=>b.questions.map(q=>({...q,_bank:b.name}))));
+async function retakeSession(){
+  clearAutoAdvance();clearSavedSession();
+  const sel=allBanks.filter(b=>selectedIds.has(b.id));
+  const fromMemory=sel.flatMap(b=>b.questions?b.questions.map(q=>({...q,_bank:b.name})):[]);
+  if(fromMemory.length){_beginSession(fromMemory);return;}
+  const source=window._sessionSource;
+  if(source&&source.length){_beginSession(source);return;}
+  showErr('Could not retake — please select banks and start a new session.');
 }
 
 function openQuitModal(){$('quit-modal').classList.add('open');}
 function closeQuitModal(){$('quit-modal').classList.remove('open');}
 
 function confirmQuit(){
-  clearAutoAdvance();
-  stopQuestionTimer();stopSessionTimer();
-  closeQuitModal();
-  // Session is already saved — keep it so they can resume later
-  goLanding();
+  clearAutoAdvance();stopQuestionTimer();stopSessionTimer();closeQuitModal();goLanding();
 }
 
 function goLanding(){showPage('page-landing');}
@@ -791,7 +918,6 @@ function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').
 (function(){
   const panel=$('materials-panel');
   let dragCounter=0;
-
   function getDropTarget(){
     const isPrivate=vaultMode==='private';
     const folderId=(activeTabId&&activeTabId!=='_all')?activeTabId:'';
@@ -800,7 +926,6 @@ function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').
     const label=folder?`📁 ${folder.name}`:(isPrivate?'🔒 Vault root':'📚 Public root');
     return{folderId,label,drive:vaultMode};
   }
-
   panel.addEventListener('dragenter',e=>{
     if(currentRole!=='admin'&&vaultMode==='private')return;
     if(!e.dataTransfer.types.includes('Files'))return;
@@ -829,26 +954,29 @@ function openNewFolderModal(){
 async function doCreateFolder(){
   const name=$('new-folder-input').value.trim();
   if(!name){$('new-folder-err').textContent='Please enter a folder name.';return;}
-  $('new-folder-confirm').textContent='Creating…';$('new-folder-confirm').disabled=true;
+  $('new-folder-modal').classList.remove('open');
   try{
-    const data=await gasPost({action:'createFolder'},{folderName:name,drive:vaultMode,role:currentRole});
-    if(data.error){$('new-folder-err').textContent=data.error;return;}
+    const data=await withLoader('Creating folder…',()=>gasPost({action:'createFolder'},{folderName:name,drive:vaultMode,role:currentRole}));
+    if(data.error){showErr(data.error);return;}
     showToast(`📁 "${name}" created!`,2800,'success');
-    $('new-folder-modal').classList.remove('open');
     await loadAllFolders();
     const newFolder=getCurrentFolders().find(f=>f.id===data.folderId);
     if(newFolder)selectTab(newFolder.id);
-  }catch{$('new-folder-err').textContent='Network error. Try again.';}
-  finally{$('new-folder-confirm').textContent='Create →';$('new-folder-confirm').disabled=false;}
+  }catch{showErr('Network error. Try again.');}
 }
 
 // ── File Context Menu ─────────────────────────────────────────────────────
-function showFileCtxMenu(x,y,fileId,fileName){
+function showFileCtxMenu(x,y,fileId,fileName,isPrivate=false){
   ctxFileId=fileId;ctxFileName=fileName;
   const menu=$('file-ctx-menu');
-  $('ctx-file-remove').textContent=currentRole==='admin'?'🗑️ Delete File':'🗂️ Remove File';
+  const isAdmin=currentRole==='admin';
+  const transferItem=$('ctx-file-transfer');
+  if(transferItem)transferItem.style.display=(!isPrivate||isAdmin)?'':'none';
+  $('ctx-file-remove').textContent=isAdmin?'🗑️ Delete File':'🗂️ Remove File';
+  const removeItem=$('ctx-file-remove');
+  if(removeItem)removeItem.style.display=(!isPrivate||isAdmin)?'':'none';
   menu.classList.remove('hidden');
-  const mw=170,mh=110;
+  const mw=170,mh=isPrivate?55:110;
   const left=x+mw>window.innerWidth?x-mw:x;
   const top=y+mh>window.innerHeight?y-mh:y;
   menu.style.left=left+'px';menu.style.top=top+'px';
@@ -865,23 +993,25 @@ async function doRenameFile(){
   const name=$('rename-file-input').value.trim();
   if(!name){$('rename-file-err').textContent='Please enter a name.';return;}
   if(name===ctxFileName){$('rename-file-modal').classList.remove('open');return;}
-  $('rename-file-confirm').textContent='Renaming…';$('rename-file-confirm').disabled=true;
+  $('rename-file-modal').classList.remove('open');
   try{
-    const data=await gasPost({action:'renameFile'},{fileId:ctxFileId,fileName:name,role:currentRole});
-    if(data.error){$('rename-file-err').textContent=data.error;return;}
-    showToast(`✏️ Renamed to "${name}"`,2800,'success');
-    $('rename-file-modal').classList.remove('open');await loadAllFolders();
-  }catch{$('rename-file-err').textContent='Network error. Try again.';}
-  finally{$('rename-file-confirm').textContent='Rename →';$('rename-file-confirm').disabled=false;}
+    const data=await withLoader('Renaming file…',()=>gasPost({action:'renameFile'},{fileId:ctxFileId,fileName:name,role:currentRole,drive:vaultMode}));
+    if(data.error){showErr(data.error);return;}
+    showToast(`✏️ Renamed to "${name}"`,2800,'success');await loadAllFolders();
+  }catch{showErr('Network error. Try again.');}
 }
 
 function openTransferFileModal(){
   pendingTransferId=ctxFileId;
   $('transfer-file-desc').textContent=`Where should "${ctxFileName}" go?`;
   const sel=$('transfer-folder-select');
-  sel.innerHTML='<option value="">📂 Ungrouped (root)</option>';
-  publicFolders.filter(f=>f.id!=='_ungrouped').forEach(f=>{
-    const o=document.createElement('option');o.value=f.id;o.textContent='📁 '+f.name;sel.appendChild(o);
+  const isPrivateFile=vaultMode==='private';
+  const rootLabel=isPrivateFile?'🔒 Vault root':'📂 Ungrouped (root)';
+  sel.innerHTML=`<option value="">${rootLabel}</option>`;
+  const sourceFolders=isPrivateFile?privateFolders:publicFolders;
+  sourceFolders.filter(f=>f.id!=='_ungrouped').forEach(f=>{
+    const o=document.createElement('option');o.value=f.id;
+    o.textContent=(isPrivateFile?'🔒 ':'📁 ')+f.name;sel.appendChild(o);
   });
   $('transfer-file-modal').classList.add('open');
 }
@@ -889,14 +1019,13 @@ function openTransferFileModal(){
 async function doTransferFile(){
   if(!pendingTransferId)return;
   const fid=$('transfer-folder-select').value||'';
-  $('transfer-file-confirm').textContent='Transferring…';$('transfer-file-confirm').disabled=true;
+  $('transfer-file-modal').classList.remove('open');
   try{
-    const data=await gasPost({action:'transferFile'},{fileId:pendingTransferId,targetFolderId:fid,role:currentRole});
+    const data=await withLoader('Transferring file…',()=>gasPost({action:'transferFile'},{fileId:pendingTransferId,targetFolderId:fid,role:currentRole,drive:vaultMode}));
     if(data.error){showErr('Transfer failed: '+data.error);return;}
-    showToast('📂 File transferred!',2800,'success');
-    $('transfer-file-modal').classList.remove('open');await loadAllFolders();
+    showToast('📂 File transferred!',2800,'success');await loadAllFolders();
   }catch{showErr('Network error.');}
-  finally{$('transfer-file-confirm').textContent='Transfer →';$('transfer-file-confirm').disabled=false;pendingTransferId=null;}
+  finally{pendingTransferId=null;}
 }
 
 function openRemoveFileModal(){
@@ -913,31 +1042,30 @@ function openRemoveFileModal(){
 
 async function doMemberRemove(){
   if(!pendingMemberRemoveId)return;
-  $('member-remove-confirm').textContent='Removing…';$('member-remove-confirm').disabled=true;
+  $('member-remove-modal').classList.remove('open');
   try{
-    const data=await gasPost({action:'memberRemove'},{fileId:pendingMemberRemoveId,role:currentRole});
+    const data=await withLoader('Removing bank…',()=>gasPost({action:'memberRemove'},{fileId:pendingMemberRemoveId,role:currentRole}));
     if(data.error){showErr('Remove failed: '+data.error);return;}
     showToast('🗂️ Bank removed from public view',2800,'success');
-    selectedIds.delete(pendingMemberRemoveId);$('member-remove-modal').classList.remove('open');
+    selectedIds.delete(pendingMemberRemoveId);
     await loadAllFolders();updateTray();updateStartBtn();
   }catch{showErr('Network error.');}
-  finally{$('member-remove-confirm').textContent='Yes, remove';$('member-remove-confirm').disabled=false;pendingMemberRemoveId=null;}
+  finally{pendingMemberRemoveId=null;}
 }
 
 // ── Folder Context Menu ───────────────────────────────────────────────────
-let ctxFolderId=null, ctxFolderName=null;
+let ctxFolderId=null,ctxFolderName=null;
 
 function showCtxMenu(x,y,folderId,folderName,role){
   ctxFolderId=folderId;ctxFolderName=folderName;
   const menu=$('folder-ctx-menu');
-  $('ctx-delete').style.display=role==='admin'?'':'none';
+  $('ctx-delete').style.display='';
   menu.classList.remove('hidden');
   const mw=160,mh=role==='admin'?90:55;
   const left=x+mw>window.innerWidth?x-mw:x;
   const top=y+mh>window.innerHeight?y-mh:y;
   menu.style.left=left+'px';menu.style.top=top+'px';
 }
-
 function hideCtxMenu(){$('folder-ctx-menu').classList.add('hidden');}
 
 function openRenameModal(){
@@ -955,52 +1083,42 @@ async function doRenameFolder(){
   const name=$('rename-folder-input').value.trim();
   if(!name){$('rename-folder-err').textContent='Please enter a name.';return;}
   if(name===ctxFolderName){$('rename-folder-modal').classList.remove('open');return;}
-  $('rename-folder-confirm').textContent='Renaming…';$('rename-folder-confirm').disabled=true;
+  $('rename-folder-modal').classList.remove('open');
   try{
-    const data=await gasPost({action:'renameFolder'},{folderId:ctxFolderId,folderName:name,role:'admin'});
-    if(data.error){$('rename-folder-err').textContent=data.error;return;}
+    const data=await withLoader('Renaming folder…',()=>gasPost({action:'renameFolder'},{folderId:ctxFolderId,folderName:name,role:'admin'}));
+    if(data.error){showErr(data.error);return;}
     showToast(`✏️ Renamed to "${name}"`,2800,'success');
-    $('rename-folder-modal').classList.remove('open');
     if(activeTabId===ctxFolderId)activeTabId=ctxFolderId;
     await loadAllFolders();
-  }catch{$('rename-folder-err').textContent='Network error. Try again.';}
-  finally{$('rename-folder-confirm').textContent='Rename →';$('rename-folder-confirm').disabled=false;}
+  }catch{showErr('Network error. Try again.');}
 }
 
 async function doDeleteFolder(){
-  $('delete-folder-confirm').textContent='Deleting…';$('delete-folder-confirm').disabled=true;
+  $('delete-folder-modal').classList.remove('open');
   try{
-    const data=await gasPost({action:'deleteFolder'},{folderId:ctxFolderId,role:currentRole});
+    const data=await withLoader('Deleting folder…',()=>gasPost({action:'deleteFolder'},{folderId:ctxFolderId,role:currentRole}));
     if(data.error){showToast(data.error,3000,'error');return;}
     showToast(`🗑️ "${ctxFolderName}" deleted`,2800,'success');
-    if(activeTabId===ctxFolderId){activeTabId=null;}
-    $('delete-folder-modal').classList.remove('open');
+    if(activeTabId===ctxFolderId)activeTabId=null;
     await loadAllFolders();showInitialPane();updateTray();updateStartBtn();
   }catch{showToast('Network error.',3000,'error');}
-  finally{$('delete-folder-confirm').textContent='Yes, delete';$('delete-folder-confirm').disabled=false;}
 }
 
-// ── Timer bar visibility helper ───────────────────────────────────────────
+// ── Timer bar ─────────────────────────────────────────────────────────────
 function syncTimerBar(){
   const qActive=!$('question-timer-wrap').classList.contains('hidden');
   const sActive=!$('session-timer-wrap').classList.contains('hidden');
-  const anyActive=qActive||sActive;
-  $('timer-bar').classList.toggle('hidden',!anyActive);
+  $('timer-bar').classList.toggle('hidden',!(qActive||sActive));
   const sep=$('timer-bar-sep');
   if(sep)sep.classList.toggle('hidden',!(qActive&&sActive));
 }
 
-// ── Question Timer ────────────────────────────────────────────────────────
 function startQuestionTimer(q,card){
-  const secs=parseInt($('select-qtimer').value)||0;
-  if(!secs)return;
-  questionTimeLeft=secs;
-  updateQuestionTimerDisplay();
-  $('question-timer-wrap').classList.remove('hidden');
-  syncTimerBar();
+  const secs=parseInt($('select-qtimer').value)||0;if(!secs)return;
+  questionTimeLeft=secs;updateQuestionTimerDisplay();
+  $('question-timer-wrap').classList.remove('hidden');syncTimerBar();
   questionTimerInterval=setInterval(()=>{
-    questionTimeLeft--;
-    updateQuestionTimerDisplay();
+    questionTimeLeft--;updateQuestionTimerDisplay();
     if(questionTimeLeft<=0){
       stopQuestionTimer();
       const btns=card.querySelectorAll('.choice-btn:not(:disabled)');
@@ -1014,8 +1132,7 @@ function startQuestionTimer(q,card){
 
 function stopQuestionTimer(){
   clearInterval(questionTimerInterval);questionTimerInterval=null;
-  const w=$('question-timer-wrap');if(w)w.classList.add('hidden');
-  syncTimerBar();
+  const w=$('question-timer-wrap');if(w)w.classList.add('hidden');syncTimerBar();
 }
 
 function updateQuestionTimerDisplay(){
@@ -1024,24 +1141,19 @@ function updateQuestionTimerDisplay(){
   el.style.color=questionTimeLeft<=5?'var(--wrong)':questionTimeLeft<=10?'var(--gold)':'var(--text)';
 }
 
-// ── Session Timer ─────────────────────────────────────────────────────────
 function startSessionTimer(){
   const mins=parseInt($('select-stimer').value)||0;if(!mins)return;
-  sessionTimeLeft=mins*60;
-  updateSessionTimerDisplay();
-  $('session-timer-wrap').classList.remove('hidden');
-  syncTimerBar();
+  sessionTimeLeft=mins*60;updateSessionTimerDisplay();
+  $('session-timer-wrap').classList.remove('hidden');syncTimerBar();
   sessionTimerInterval=setInterval(()=>{
-    sessionTimeLeft--;
-    updateSessionTimerDisplay();
+    sessionTimeLeft--;updateSessionTimerDisplay();saveSession();
     if(sessionTimeLeft<=0){stopSessionTimer();clearSavedSession();showSummary();}
   },1000);
 }
 
 function stopSessionTimer(){
   clearInterval(sessionTimerInterval);sessionTimerInterval=null;
-  const w=$('session-timer-wrap');if(w)w.classList.add('hidden');
-  syncTimerBar();
+  const w=$('session-timer-wrap');if(w)w.classList.add('hidden');syncTimerBar();
 }
 
 function updateSessionTimerDisplay(){
@@ -1051,12 +1163,12 @@ function updateSessionTimerDisplay(){
   el.style.color=sessionTimeLeft<=30?'var(--wrong)':sessionTimeLeft<=60?'var(--gold)':'var(--text)';
 }
 
-// ── Weak Topics Tracker ───────────────────────────────────────────────────
+// ── Weak Topics ───────────────────────────────────────────────────────────
 function buildWeakTopics(){
   const bankMap={};
-  const firstAttempt={};
-  sessionResults.forEach(r=>{if(!(r.q.question in firstAttempt))firstAttempt[r.q.question]=r;});
-  Object.values(firstAttempt).forEach(r=>{
+  const firstAttemptMap=new Map();
+  sessionResults.forEach(r=>{if(!firstAttemptMap.has(r.q.question))firstAttemptMap.set(r.q.question,r);});
+  firstAttemptMap.forEach(r=>{
     const bank=r.q._bank||'Unknown';
     if(!bankMap[bank])bankMap[bank]={correct:0,total:0};
     bankMap[bank].total++;if(r.isCorrect)bankMap[bank].correct++;
