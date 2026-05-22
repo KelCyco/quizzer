@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Quizzer — Under Maintenance</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 56 56'%3E%3Crect width='56' height='56' rx='14' fill='%231e1e28'/%3E%3Crect x='14' y='16' width='28' height='4' rx='2' fill='%237c6af7'/%3E%3Crect x='14' y='26' width='20' height='4' rx='2' fill='%237c6af7' opacity='.6'/%3E%3Crect x='14' y='36' width='24' height='4' rx='2' fill='%237c6af7' opacity='.35'/%3E%3Ccircle cx='42' cy='38' r='7' fill='%234ade80'/%3E%3Cpolyline points='38.5,38 41,40.5 45.5,35.5' stroke='%230f1f0f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f0f13;
+      --bg2: #16161d;
+      --bg3: #1e1e28;
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(255,255,255,0.15);
+      --text: #e8e8f0;
+      --text-muted: #7a7a9a;
+      --text-dim: #4a4a6a;
+      --accent: #7c6af7;
+      --accent-glow: rgba(124,106,247,0.2);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Sora', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% -10%, rgba(124,106,247,0.10) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 110%, rgba(247,192,106,0.05) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .card {
+      position: relative;
+      z-index: 1;
+      background: var(--bg2);
+      border: 1px solid var(--border-hover);
+      border-radius: 20px;
+      padding: 2.75rem 2.25rem;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      animation: cardIn 0.5s cubic-bezier(0.34,1.2,0.64,1) forwards;
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .logo { margin-bottom: 1.75rem; display: flex; justify-content: center; }
+    h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 0.6rem;
+      color: var(--text);
+    }
+    p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <svg width="44" height="44" viewBox="0 0 56 56" fill="none">
+        <rect width="56" height="56" rx="14" fill="#1e1e28"/>
+        <rect x="14" y="16" width="28" height="4" rx="2" fill="#7c6af7"/>
+        <rect x="14" y="26" width="20" height="4" rx="2" fill="#7c6af7" opacity="0.6"/>
+        <rect x="14" y="36" width="24" height="4" rx="2" fill="#7c6af7" opacity="0.35"/>
+        <circle cx="42" cy="38" r="7" fill="#4ade80"/>
+        <polyline points="38.5,38 41,40.5 45.5,35.5" stroke="#0f1f0f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+    </div>
+    <h1>Down for maintenance</h1>
+    <p>Quizzer is currently undergoing scheduled maintenance. Check back soon.</p>
+  </div>
+</body>
+</html>

@@ -1,6 +1,7 @@
 const GAS_URL   = 'https://script.google.com/macros/s/AKfycbyItj-3QhjGvVu4H0wAPLdMWijAgTmUN75v1cFoGj7Wm6vFUJl6AuyCFIRM-QcIF2g/exec';
 const GAS_READY = !!GAS_URL && !GAS_URL.includes('PASTE_YOUR');
-const DEVTOOLS_BLOCK = true;
+const DEVTOOLS_BLOCK = true; // flip to true to block
+const MAINTENANCE_MODE = true; // flip to true to activate
 const AUTO_ADVANCE_CORRECT_SECS = 1;
 const AUTO_ADVANCE_WRONG_SECS   = 2;
 const SESSION_STORAGE_KEY = 'quizzer_session_v1';
@@ -118,6 +119,12 @@ async function withLoader(msg, fn) {
 // ══════════════════════════════════════════════════════════════
 
 window.addEventListener('DOMContentLoaded',()=>{
+ 
+  if (MAINTENANCE_MODE) { 
+    window.location.replace('maintenance.html'); 
+    return; 
+  }
+
   $('refresh-btn').addEventListener('click',()=>loadAllFolders());
   $('add-bank-btn').addEventListener('click',()=>$('file-input').click());
   $('file-input').addEventListener('change',e=>{handleFiles(e.target.files);e.target.value='';});
