@@ -17,11 +17,9 @@
   <div id="page-splash">
     <div class="glow-orb"></div>
     <div class="fade-out"></div>
-
     <div class="logo-wrap">
       <div class="shimmer-mask"></div>
       <div class="ripple-ring"></div>
-
       <svg class="logo-svg" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="56" height="56" rx="16" fill="#1e1e28"/>
         <rect class="bar1" x="14" y="16" width="28" height="4" rx="2" fill="#7c6af7"/>
@@ -29,10 +27,7 @@
         <rect class="bar3" x="14" y="36" width="24" height="4" rx="2" fill="#7c6af7" opacity="0.35"/>
         <g class="check-grp">
           <circle cx="42" cy="38" r="7" fill="#4ade80"/>
-          <polyline class="check-path"
-            points="38.5,38 41,40.5 45.5,35.5"
-            stroke="#0f1f0f" stroke-width="1.8"
-            stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <polyline class="check-path" points="38.5,38 41,40.5 45.5,35.5" stroke="#0f1f0f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
         </g>
       </svg>
     </div>
@@ -44,6 +39,7 @@
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <div id="page-landing" class="page hidden">
 
+    <!-- Sidebar (logo + role badge) -->
     <div class="logo-sidebar">
       <svg width="40" height="40" viewBox="0 0 56 56" fill="none">
         <rect width="56" height="56" rx="14" fill="#1e1e28"/>
@@ -56,6 +52,7 @@
       <span id="role-badge-sidebar" class="role-badge"></span>
     </div>
 
+    <!-- Main content column -->
     <div class="banks-col">
 
       <div class="config-banner hidden" id="config-banner">
@@ -66,16 +63,28 @@
       <div class="banks-body">
         <div class="materials-panel" id="materials-panel">
 
+          <!-- Drop overlay -->
           <div class="drop-overlay" id="drop-overlay">
             <div class="drop-overlay-icon">📥</div>
             <div class="drop-overlay-label">Drop to upload</div>
             <div class="drop-overlay-sub" id="drop-overlay-sub">Uploading to current folder</div>
           </div>
 
-          <div class="materials-header">
-            <span class="materials-title">Question Banks</span>
+          <!-- ── DESKTOP: Materials header ── -->
+          <div class="materials-header" id="materials-header">
+            <!-- Breadcrumb shown when inside a main folder -->
+            <div class="nav-breadcrumb hidden" id="nav-breadcrumb">
+              <button class="breadcrumb-back" id="breadcrumb-back">← <span id="breadcrumb-back-label">Folders</span></button>
+              <span class="breadcrumb-sep">›</span>
+              <span class="breadcrumb-current" id="breadcrumb-current"></span>
+            </div>
+            <!-- Title shown on root level -->
+            <span class="materials-title" id="materials-title-text">Question Banks</span>
             <span class="bank-count-badge" id="bank-count-badge">0</span>
+
+            <!-- Search (scoped to current main folder on desktop) -->
             <input class="search-input" id="search-input" type="text" placeholder="Search banks…">
+
             <div class="header-btns">
               <div class="vault-toggle-wrap" id="vault-toggle-wrap">
                 <button class="vault-mode-btn active" id="btn-mode-public">🌐 Public</button>
@@ -92,20 +101,56 @@
             <input type="file" id="file-input" accept=".xlsx,.xls,.csv" multiple>
           </div>
 
-          <div class="folder-tabs-bar" id="folder-tabs-bar">
-            <button class="new-folder-tab-btn hidden" id="new-folder-btn" title="New Folder">＋</button>
-            <div class="tabs-spacer"></div>
-            <button class="select-all-btn hidden-btn" id="select-all-btn">Select All</button>
+          <!-- ── DESKTOP LEVEL 1: Folder card grid ── -->
+          <div class="folder-card-grid" id="folder-card-grid">
+            <!-- Populated by JS -->
           </div>
 
-          <div class="bank-pane" id="bank-pane">
-            <div class="bank-pane-empty">
-              <div class="bank-pane-empty-icon">📁</div>
-              Select a folder to view its banks.
-              <span style="font-size: 0.72rem;">Banks load on demand when a folder is opened.</span>
+          <!-- ── DESKTOP LEVEL 2+3: Two-column subfolder/bank panel ── -->
+          <div class="subfolder-panel hidden" id="subfolder-panel">
+            <!-- Left: subfolder list -->
+            <div class="subfolder-list" id="subfolder-list">
+              <!-- Populated by JS -->
+            </div>
+            <!-- Right: bank list pane -->
+            <div class="bank-pane" id="bank-pane">
+              <div class="bank-pane-empty">
+                <div class="bank-pane-empty-icon">📂</div>
+                Select a subfolder to view its banks.
+              </div>
             </div>
           </div>
 
+          <!-- ── MOBILE: Three-level drill-down ── -->
+          <!-- Level 1: main folder list -->
+          <div class="mobile-nav-view" id="mob-level1">
+            <div class="mobile-folder-list" id="mob-folder-list">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Level 2: subfolder list -->
+          <div class="mobile-nav-view hidden" id="mob-level2">
+            <div class="mobile-search-wrap">
+              <input class="search-input" id="mob-search-input" type="text" placeholder="Search subfolders…">
+            </div>
+            <div class="mobile-subfolder-list" id="mob-subfolder-list">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Level 3: bank list -->
+          <div class="mobile-nav-view hidden" id="mob-level3">
+            <div class="mobile-bank-header">
+              <span class="mobile-bank-header-title" id="mob-subfolder-title">Banks</span>
+              <button class="select-all-btn" id="mob-select-all-btn">Select All</button>
+            </div>
+            <div class="bank-pane bank-pane-mobile" id="bank-pane-mobile">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Selected tray -->
           <div class="selected-tray empty" id="selected-tray">
             <div class="tray-collapsed" id="tray-collapsed">
               <span class="tray-label">Selected</span>
@@ -120,6 +165,7 @@
         </div><!-- /materials-panel -->
       </div><!-- /banks-body -->
 
+      <!-- Mobile bottom strip -->
       <div class="mobile-bottom-strip">
         <button class="mobile-settings-btn" id="mobile-settings-btn">⚙ Settings</button>
         <button class="mobile-start-btn" id="mobile-start-btn" disabled>Start Session →</button>
@@ -127,33 +173,22 @@
 
     </div><!-- /banks-col -->
 
+    <!-- Desktop settings column -->
     <div class="settings-col">
       <div class="settings-title">Session Settings</div>
       <span id="role-badge-desktop" class="role-badge"></span>
       <div class="settings-list">
         <div class="setting-row">
           <div class="setting-label">Mastery mode</div>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-mastery" checked>
-            <div class="toggle-track"></div>
-            <div class="toggle-thumb"></div>
-          </label>
+          <label class="toggle"><input type="checkbox" id="toggle-mastery" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
         </div>
         <div class="setting-row">
           <div class="setting-label">Shuffle questions</div>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-shuffle" checked>
-            <div class="toggle-track"></div>
-            <div class="toggle-thumb"></div>
-          </label>
+          <label class="toggle"><input type="checkbox" id="toggle-shuffle" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
         </div>
         <div class="setting-row">
           <div class="setting-label">Auto-advance</div>
-          <label class="toggle">
-            <input type="checkbox" id="toggle-auto" checked>
-            <div class="toggle-track"></div>
-            <div class="toggle-thumb"></div>
-          </label>
+          <label class="toggle"><input type="checkbox" id="toggle-auto" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
         </div>
         <div class="setting-row">
           <div class="setting-label">Question limit</div>
@@ -266,18 +301,9 @@
       </div>
 
       <div class="summary-stats">
-        <div class="stat-cell">
-          <div class="stat-value green" id="sum-correct">0</div>
-          <div class="stat-label" id="label-correct">Correct</div>
-        </div>
-        <div class="stat-cell">
-          <div class="stat-value red" id="sum-wrong">0</div>
-          <div class="stat-label" id="label-wrong">Incorrect</div>
-        </div>
-        <div class="stat-cell">
-          <div class="stat-value amber" id="sum-total">0</div>
-          <div class="stat-label" id="label-total">Total</div>
-        </div>
+        <div class="stat-cell"><div class="stat-value green" id="sum-correct">0</div><div class="stat-label" id="label-correct">Correct</div></div>
+        <div class="stat-cell"><div class="stat-value red" id="sum-wrong">0</div><div class="stat-label" id="label-wrong">Incorrect</div></div>
+        <div class="stat-cell"><div class="stat-value amber" id="sum-total">0</div><div class="stat-label" id="label-total">Total</div></div>
       </div>
 
       <div class="summary-weak">
@@ -287,6 +313,7 @@
         </div>
         <div class="weak-topics-body" id="weak-topics-body" style="display:none;"></div>
       </div>
+
       <div class="summary-review">
         <div class="review-title">Answer Review</div>
         <div class="review-list" id="review-list"></div>
@@ -311,14 +338,8 @@
       <div class="modal-icon">⚡</div>
       <div class="modal-title">Resume Session?</div>
       <div class="resume-info-block">
-        <div class="resume-info-row">
-          <span class="resume-info-label">Banks</span>
-          <span class="resume-info-val" id="resume-banks">—</span>
-        </div>
-        <div class="resume-info-row">
-          <span class="resume-info-label">Progress</span>
-          <span class="resume-info-val" id="resume-progress">—</span>
-        </div>
+        <div class="resume-info-row"><span class="resume-info-label">Banks</span><span class="resume-info-val" id="resume-banks">—</span></div>
+        <div class="resume-info-row"><span class="resume-info-label">Progress</span><span class="resume-info-val" id="resume-progress">—</span></div>
         <div class="resume-info-time" id="resume-time"></div>
       </div>
       <div class="modal-actions">
@@ -360,50 +381,12 @@
     <div class="modal-box">
       <div class="modal-title">Session Settings</div>
       <div class="settings-list">
-        <div class="setting-row">
-          <div class="setting-label">Mastery mode</div>
-          <label class="toggle"><input type="checkbox" id="mob-toggle-mastery" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
-        </div>
-        <div class="setting-row">
-          <div class="setting-label">Shuffle questions</div>
-          <label class="toggle"><input type="checkbox" id="mob-toggle-shuffle" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
-        </div>
-        <div class="setting-row">
-          <div class="setting-label">Auto-advance</div>
-          <label class="toggle"><input type="checkbox" id="mob-toggle-auto" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
-        </div>
-        <div class="setting-row">
-          <div class="setting-label">Question limit</div>
-          <select class="limit-select" id="mob-select-limit">
-            <option value="0">All</option>
-            <option value="10">10</option>
-            <option value="20">20</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-            <option value="200">200</option>
-          </select>
-        </div>
-        <div class="setting-row">
-          <div class="setting-label">Q. timer (sec)</div>
-          <select class="limit-select" id="mob-select-qtimer">
-            <option value="0">Off</option>
-            <option value="15">15s</option>
-            <option value="30">30s</option>
-            <option value="45">45s</option>
-            <option value="60">60s</option>
-            <option value="90">90s</option>
-          </select>
-        </div>
-        <div class="setting-row">
-          <div class="setting-label">Session timer</div>
-          <select class="limit-select" id="mob-select-stimer">
-            <option value="0">Off</option>
-            <option value="30">30m</option>
-            <option value="60">1hr</option>
-            <option value="120">2hr</option>
-            <option value="180">3hr</option>
-          </select>
-        </div>
+        <div class="setting-row"><div class="setting-label">Mastery mode</div><label class="toggle"><input type="checkbox" id="mob-toggle-mastery" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+        <div class="setting-row"><div class="setting-label">Shuffle questions</div><label class="toggle"><input type="checkbox" id="mob-toggle-shuffle" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+        <div class="setting-row"><div class="setting-label">Auto-advance</div><label class="toggle"><input type="checkbox" id="mob-toggle-auto" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label></div>
+        <div class="setting-row"><div class="setting-label">Question limit</div><select class="limit-select" id="mob-select-limit"><option value="0">All</option><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option><option value="200">200</option></select></div>
+        <div class="setting-row"><div class="setting-label">Q. timer (sec)</div><select class="limit-select" id="mob-select-qtimer"><option value="0">Off</option><option value="15">15s</option><option value="30">30s</option><option value="45">45s</option><option value="60">60s</option><option value="90">90s</option></select></div>
+        <div class="setting-row"><div class="setting-label">Session timer</div><select class="limit-select" id="mob-select-stimer"><option value="0">Off</option><option value="30">30m</option><option value="60">1hr</option><option value="120">2hr</option><option value="180">3hr</option></select></div>
       </div>
       <div class="modal-actions" style="margin-top: 1.25rem; justify-content: center;">
         <button class="modal-btn primary" id="settings-done-btn" style="max-width: 140px;">Done</button>
@@ -429,7 +412,7 @@
     <div class="modal-box">
       <div class="modal-icon">🌐</div>
       <div class="modal-title">Publish to Public</div>
-      <div class="modal-desc" id="publish-modal-desc">Choose a destination folder in the public Drive.</div>
+      <div class="modal-desc" id="publish-modal-desc">Choose a destination subfolder in the public Drive.</div>
       <select class="modal-select" id="publish-folder-select">
         <option value="">📂 Ungrouped (root)</option>
       </select>
@@ -453,54 +436,6 @@
     </div>
   </div>
 
-  <!-- New folder -->
-  <div class="modal-overlay" id="new-folder-modal">
-    <div class="modal-box">
-      <div class="modal-icon">📁</div>
-      <div class="modal-title">New Folder</div>
-      <div class="modal-desc" id="new-folder-modal-desc">Create a new folder in the current drive.</div>
-      <input class="password-input" id="new-folder-input" type="text" placeholder="Folder name…" maxlength="60" autocomplete="off" style="letter-spacing: normal; font-size: 0.95rem;">
-      <div class="password-err" id="new-folder-err"></div>
-      <div class="modal-actions">
-        <button class="modal-btn ghost" id="new-folder-cancel">Cancel</button>
-        <button class="modal-btn primary" id="new-folder-confirm">Create →</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Rename folder -->
-  <div class="modal-overlay" id="rename-folder-modal">
-    <div class="modal-box">
-      <div class="modal-icon">✏️</div>
-      <div class="modal-title">Rename Folder</div>
-      <input class="password-input" id="rename-folder-input" type="text" placeholder="New name…" maxlength="60" autocomplete="off" style="letter-spacing: normal; font-size: 0.95rem;">
-      <div class="password-err" id="rename-folder-err"></div>
-      <div class="modal-actions">
-        <button class="modal-btn ghost" id="rename-folder-cancel">Cancel</button>
-        <button class="modal-btn primary" id="rename-folder-confirm">Rename →</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Delete folder -->
-  <div class="modal-overlay" id="delete-folder-modal">
-    <div class="modal-box">
-      <div class="modal-icon">🗑️</div>
-      <div class="modal-title">Delete Folder</div>
-      <div class="modal-desc" id="delete-folder-desc">This will permanently delete the folder and all banks inside it.</div>
-      <div class="modal-actions">
-        <button class="modal-btn ghost" id="delete-folder-cancel">Cancel</button>
-        <button class="modal-btn danger" id="delete-folder-confirm">Yes, delete</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Folder context menu -->
-  <div class="ctx-menu hidden" id="folder-ctx-menu">
-    <button class="ctx-item" id="ctx-rename">✏️ Rename Folder</button>
-    <button class="ctx-item ctx-danger" id="ctx-delete">🗑️ Delete Folder</button>
-  </div>
-
   <!-- Rename file -->
   <div class="modal-overlay" id="rename-file-modal">
     <div class="modal-box">
@@ -520,7 +455,7 @@
     <div class="modal-box">
       <div class="modal-icon">📂</div>
       <div class="modal-title">Transfer File</div>
-      <div class="modal-desc" id="transfer-file-desc">Choose a destination folder.</div>
+      <div class="modal-desc" id="transfer-file-desc">Choose a destination subfolder.</div>
       <select class="modal-select" id="transfer-folder-select">
         <option value="">📂 Ungrouped (root)</option>
       </select>
@@ -551,6 +486,18 @@
     <button class="ctx-item ctx-danger" id="ctx-file-remove">🗑️ Remove</button>
   </div>
 
+  <!-- MOBILE GLOBAL SEARCH OVERLAY -->
+  <div class="mob-search-overlay" id="mob-search-overlay">
+    <div class="mob-search-box">
+      <div class="mob-search-header">
+        <button class="mob-search-close-btn" id="mob-search-close-btn">← Back</button>
+        <input class="mob-global-search-input" id="mob-global-search-input"
+          type="text" placeholder="Search all banks…" autocomplete="off">
+      </div>
+      <div class="mob-search-results" id="mob-search-results"></div>
+    </div>
+  </div>
+
   <!-- ═══════════════════════════════════════════════════════════════════ -->
   <!--  LOADING OVERLAY                                                    -->
   <!-- ═══════════════════════════════════════════════════════════════════ -->
@@ -565,9 +512,7 @@
         <rect class="lo-bar lo-bar3" x="14" y="36" width="24" height="4" rx="2"/>
         <g class="lo-check-grp">
           <circle cx="42" cy="38" r="9" fill="#4ade80"/>
-          <polyline points="38.5,38 41,40.5 45.5,35.5"
-            stroke="#0f1f0f" stroke-width="1.8"
-            stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <polyline points="38.5,38 41,40.5 45.5,35.5" stroke="#0f1f0f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
         </g>
       </svg>
     </div>
