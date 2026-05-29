@@ -3,7 +3,7 @@
 // ══════════════════════════════════════════════════════════════
 const GAS_URL   = 'https://script.google.com/macros/s/AKfycbyItj-3QhjGvVu4H0wAPLdMWijAgTmUN75v1cFoGj7Wm6vFUJl6AuyCFIRM-QcIF2g/exec';
 const GAS_READY = !!GAS_URL && !GAS_URL.includes('PASTE_YOUR');
-const DEVTOOLS_BLOCK = false;
+const DEVTOOLS_BLOCK = true;
 const MAINTENANCE_MODE = false;
 const AUTO_ADVANCE_CORRECT_SECS = 1;
 const AUTO_ADVANCE_WRONG_SECS   = 2;
